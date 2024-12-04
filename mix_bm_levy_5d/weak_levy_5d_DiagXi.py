@@ -220,7 +220,7 @@ class Model(object):
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number # mu: db
-        F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b 这里只有对角元
+        F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b There are only diagonal elements
         C_number = self.dimension if self.xi_independence else 1#* self.basis2_number #* self.basis2_number  #d^2 c
 
         A = torch.zeros([self.t_number, H_number+F_number+C_number]).to(self.device)
@@ -318,7 +318,7 @@ class Model(object):
 
     def sampleTestFunc(self, samp_number):
         #L = self.data.shape[0]
-        #L2 = round(L/2) #round(2L/3)  #之前没有2想刨除0时刻的随机分布，从运动一小段时间之后算起
+        #L2 = round(L/2) #round(2L/3) 
         if self.gauss_samp_way == 'lhs':       
             lb = torch.tensor([self.data[:, :, i].min()*(2/3) for i in range(self.dimension)]).to(self.device)
             ub = torch.tensor([self.data[:, :, i].max()*(2/3) for i in range(self.dimension)]).to(self.device)

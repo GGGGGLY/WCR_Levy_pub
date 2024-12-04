@@ -493,8 +493,8 @@ if __name__ == '__main__':
     t = np.array([0.1, 0.3, 0.5, 0.7, 1.0]).astype(np.float32)
     t = torch.tensor(t)
     dim = 3
-    #Xi_type = "cI" #对角元相同的对角阵  case1
-    Xi_type = "Diag" # 对角元分别估计 case2
+    #Xi_type = "cI" 
+    Xi_type = "Diag" 
     
     drift = torch.tensor([0, 1.0, 0.0, -1.5]).repeat(dim, 1)
     xi = torch.tensor([1.0, 1.5, 1.0], dtype=torch.float) #torch.ones(dim)

@@ -209,7 +209,7 @@ class DataSet(object):
                 return y
         
         
-        elif self.drift_term.shape == torch.Size([3, 20]) or self.drift_term.shape == torch.Size([5, 31]):   #3d含交叉项 3-order; 5d 只考虑对potential的系数进行估计，3-order
+        elif self.drift_term.shape == torch.Size([3, 20]) or self.drift_term.shape == torch.Size([5, 31]):   
             """
             two or three dims, three-order polynomial, has cross-terms
             """

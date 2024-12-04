@@ -59,7 +59,7 @@ class DataSet_plot_inter(object):
         return X
     
 
-    def subSDE(self, t0, t1, x):  # t0：时间间隔的开始；t1：时间间隔的结束；x：上次得到的位置
+    def subSDE(self, t0, t1, x):  
         if t0 == t1:
             return x
         else:

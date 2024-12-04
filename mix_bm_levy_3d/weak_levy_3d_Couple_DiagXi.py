@@ -216,7 +216,7 @@ class Model(object):
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number # mu: db
-        #F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b 这里只有对角元
+        #F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b There are only diagonal elements
         C_number = self.dimension if self.xi_independence else 1#* self.basis2_number #* self.basis2_number  #d^2 c
 
         A = torch.zeros([self.t_number, H_number+C_number]).to(self.device)

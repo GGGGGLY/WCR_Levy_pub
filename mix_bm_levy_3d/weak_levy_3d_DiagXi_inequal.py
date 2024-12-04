@@ -227,7 +227,7 @@ class Model(object):
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number # mu: db
-        F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b 这里只有对角元
+        F_number = self.dimension if self.diffusion_independence else 1  #sigma  d^2 b There are only diagonal elements
         C_number = self.dimension if self.xi_independence else 1#* self.basis2_number #* self.basis2_number  #d^2 c
 
         A = torch.zeros([self.t_number, H_number+F_number+C_number]).to(self.device)
@@ -531,8 +531,8 @@ if __name__ == '__main__':
     t = torch.tensor(t)
     dim = 3
     xi_q = 0
-    #Xi_type = "cI" #对角元相同的对角阵  case1
-    Xi_type = "Diag" # 对角元分别估计 case2
+    #Xi_type = "cI" 
+    Xi_type = "Diag" 
     
     drift = torch.tensor([0, 1, 0, -1]).repeat(dim, 1)
     diffusion = torch.ones(dim)
