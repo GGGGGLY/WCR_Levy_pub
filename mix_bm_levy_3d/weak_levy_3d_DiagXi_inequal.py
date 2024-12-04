@@ -462,7 +462,7 @@ class Model(object):
         if only_hat_13:
             I = torch.tensor([1, 2, 6, 7, 8, 9, 11, 12, 16, 17, 18, 19, 20, 21])
             self.A = self.A[:, I]
-        #self.A = torch.where(self.A == 0, 0.0001, self.A) ####################3
+        #self.A = torch.where(self.A == 0, 0.0001, self.A) 
         self.A = self.A.to("cpu")
         self.b = self.b.to("cpu")
         AA = torch.mm(torch.t(self.A), self.A)
