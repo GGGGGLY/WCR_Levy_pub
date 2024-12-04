@@ -14,7 +14,7 @@ All files starting with "generate" are used to generate data, using the discrete
 
 Adjustable parameters include but are not limited to: sample (indicates the number of samples), gauss_variance, gauss_samp_number, lam, STRidge_threshold, lhs_ratio;
 
-The input $\bm{x}$ is a three-dimensional tentor with shape [num_of_timesteps, num_of_traj, num_of_problem]; 
+The input $x$ is a three-dimensional tentor with shape [num_of_timesteps, num_of_traj, num_of_problem]; 
 
 Other parameters: 
 
@@ -23,3 +23,9 @@ basis_number indicates how many terms there are when expanding, for example, in 
 
 
 ## Citation
+@article{guo2024weak,
+  title={Weak Collocation Regression for Inferring Stochastic Dynamics with L$\backslash$'$\{$e$\}$ vy Noise},
+  author={Guo, Liya and Lu, Liwei and Zeng, Zhijun and Hu, Pipi and Zhu, Yi},
+  journal={arXiv preprint arXiv:2403.08292},
+  year={2024}
+  }
