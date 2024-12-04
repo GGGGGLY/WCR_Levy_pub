@@ -23,6 +23,7 @@ basis_number indicates how many terms there are when expanding, for example, in 
 
 
 ## Citation
+```bibtex
 @article{guo2024weak,
   title={Weak Collocation Regression for Inferring Stochastic Dynamics with L$\backslash$'$\{$e$\}$ vy Noise},
   author={Guo, Liya and Lu, Liwei and Zeng, Zhijun and Hu, Pipi and Zhu, Yi},
