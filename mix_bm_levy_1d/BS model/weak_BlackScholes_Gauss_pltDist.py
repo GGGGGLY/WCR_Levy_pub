@@ -70,6 +70,7 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
+        
         #         (x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         x = (x - self.mu)/self.sigma/np.sqrt(2)
         func = (1/self.sigma/np.sqrt(2))**self.lap_alpha * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
@@ -126,7 +127,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  # three dim: time，num_of_traj，dim_of_problem
+        X = self.data[it,:,:] 
         return X
     
     @utils.timing # decorator
@@ -136,18 +137,12 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)\
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
         
-        # sigma的基是1,x, 那么G(=(1/2)*sigma^2)的基为 1, x, x^2    
-        # BasisSigma_order=1 (basis: {1, x}); BasisSigma_order*2=2  (basis: {1, x, x^2, x^4})  
-       
         self.basis2_number = int(np.math.factorial(self.dimension+self.BasisSigma_order)\
                 /(np.math.factorial(self.dimension)*np.math.factorial(self.BasisSigma_order)))
         
-        #basis_order = 1 用1阶多项式展开
-        #self.basis_number 展开有多少项 一维时，basis number = basis order;  二维时，basis order = 2, basis number = 6(1, x,y,x^2, y^2, xy)
-
-
+        
         # Construct Theta
         basis1 = [] 
         for it in range(self.t_number):
@@ -240,11 +235,9 @@ class Model(object):
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
-        #unsqueeze()用于增加一个维度
 
     def computeTrueLoss(self):
         return (torch.matmul(self.A, self.zeta_true)-self.b.unsqueeze(-1)).norm(2)     
-        #torch.matmul(b, a) 矩阵b与a相乘
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
@@ -394,7 +387,7 @@ class Model(object):
             mu = mu_list[i]
             sigma = sigma_list[i]
             #gauss = self.net(mu, sigma)
-            gauss = self.net(mu, sigma,3/2) #########alpha在哪赋值？？？
+            gauss = self.net(mu, sigma,3/2) 
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)
@@ -429,7 +422,7 @@ class Model(object):
         # Get the standard ridge esitmate
         if lam != 0: w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
         else:
-            #w = np.linalg.lstsq(X,y)[0] #########################
+            #w = np.linalg.lstsq(X,y)[0] 
             X_inv = np.linalg.pinv(X)
             w = np.dot(X_inv,y)
         num_relevant = d
@@ -515,6 +508,12 @@ class Model(object):
         index = torch.nonzero(true).squeeze()
         relative_error = torch.abs((self.zeta.squeeze()[index] - true[index]) / true[index])
         print("Maximum relative error: ", relative_error.max().numpy())
+        drift_est = self.zeta[0: self.basis1_number]
+        diffusion_est = self.zeta[-1]
+        zz = torch.zeros(1)
+        diffusion_est = torch.cat((zz, diffusion_est),0)
+        return drift_est, diffusion_est
+
 
 if __name__ == '__main__':
     np.random.seed(7) 
@@ -525,129 +524,25 @@ if __name__ == '__main__':
     #t = torch.tensor([0.1, 0.3, 0.5])
     #t = torch.tensor([0.2, 0.5, 1.0])
     #t = torch.linspace(0,1,10)
-    t = torch.tensor([0.1, 0.3, 0.4, 0.7, 1])
-    # t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    #t = torch.tensor([0.1, 0.3, 0.4, 0.7, 1])
+    t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     #t = torch.tensor([0.2, 0.5, 1])
-    # data = scipy.io.loadmat('./data/data1d.mat')['bb'].astype(np.float32)
-    # data = torch.tensor(data).unsqueeze(-1)
-    # drift = torch.tensor([0, -3, -0.5, 4, 0.5, -1])   # -(x+1.5)(x+1)x(x-1)(x-2)
-    # drift = torch.tensor([0, -24, 50, -35, 10, -1])     # -x(x-1)(x-2)(x-3)(x-4)
-    # drift = torch.tensor([0, -4, 0, 5, 0, -1])  # -x(x-1)(x+1)(x-2)(x+2)
+   
     drift = torch.tensor([0, 1, 0, -1])
     diffusion = torch.tensor([0, 1.0])
     samples = 10000
     BasisSigma_order=1
     dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1, drift_term=drift, diffusion_term=diffusion,\
-                      alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]),\
+                      alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]), label = "Gauss",\
                       explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
     data = dataset.get_data(plot_hist=False)
     print("data: ", data.shape, data.max(), data.min())
 
     testFunc = Gaussian
     model = Model(t, data, testFunc)
-    model.compile(basis_order=3, BasisSigma_order=BasisSigma_order*2, gauss_variance=1.8, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, \
-                  gauss_samp_way='lhs', lhs_ratio=1.2)
-    model.train(gauss_samp_number=20, lam=0.0, STRidge_threshold=0.2)
+    model.compile(basis_order=3, BasisSigma_order=BasisSigma_order*2, gauss_variance=1.2, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, \
+                  gauss_samp_way='lhs', lhs_ratio=1.0)
+    drift_est, diffusion_est = model.train(gauss_samp_number=20, lam=0.0, STRidge_threshold=0.2)
     
         
-        
- ##### (1) t = torch.tensor([0.1, 0.4, 0.7, 1.0])     
-  
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 1.0
-# Drift term:  [0.] + [0.9506427]x^1 + [0.]x^2 + [-0.8545283]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9506,  0.0000, -0.8545,  0.0000,  0.0000,  0.8508])
-#Maximum relative error:  0.14921027
-#'train' took 0.082242 s
-   
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 1.2
-# Drift term:  [0.] + [0.9477385]x^1 + [0.]x^2 + [-0.8548453]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9477,  0.0000, -0.8548,  0.0000,  0.0000,  0.8637])
-#Maximum relative error:  0.14515471
-#'train' took 0.085028 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 1.5
-# Drift term:  [0.] + [0.937815]x^1 + [0.]x^2 + [-0.8320544]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9378,  0.0000, -0.8321,  0.0000,  0.0000,  0.8559])
-#Maximum relative error:  0.16794562
-#'train' took 0.134358 s
-
-
-       
- ##### (2) t = torch.tensor([0.1,0.3, 0.4, 0.7, 1.0])     
-  
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 1.2
-# Drift term:  [0.] + [0.9498909]x^1 + [0.]x^2 + [-0.86458266]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9499,  0.0000, -0.8646,  0.0000,  0.0000,  0.8834])
-#Maximum relative error:  0.13541734
-#'train' took 0.123135 s
-
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.1, lhs = 1.2
-# Drift term:  [0.] + [0.950867]x^1 + [0.]x^2 + [-0.8715343]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9509,  0.0000, -0.8715,  0.0000,  0.0000,  0.8940])
-#Maximum relative error:  0.12846571
-#'train' took 0.096542 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.2, lhs = 1.2
-#Drift term:  [0.] + [0.95209974]x^1 + [0.]x^2 + [-0.8782518]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9521,  0.0000, -0.8783,  0.0000,  0.0000,  0.9025])
-#Maximum relative error:  0.12174821
-#'train' took 0.150463 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.3, lhs = 1.2
-# Drift term:  [0.] + [0.9536577]x^1 + [0.]x^2 + [-0.88460743]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9537,  0.0000, -0.8846,  0.0000,  0.0000,  0.9088])
-#Maximum relative error:  0.115392566
-#'train' took 0.091053 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.5, lhs = 1.2
-# Drift term:  [0.] + [0.9580895]x^1 + [0.]x^2 + [-0.89577013]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9581,  0.0000, -0.8958,  0.0000,  0.0000,  0.9146])
-#Maximum relative error:  0.10422987
-#'train' took 0.215771 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.8, lhs = 1.2
-#Drift term:  [0.] + [0.96964365]x^1 + [0.]x^2 + [-0.90811044]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9696,  0.0000, -0.9081,  0.0000,  0.0000,  0.9037])
-#Maximum relative error:  0.09630674
-#'train' took 0.092586 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.2, gauss_var = 2, lhs = 1.2
-# Drift term:  [0.] + [0.98048234]x^1 + [0.]x^2 + [-0.91323835]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9805,  0.0000, -0.9132,  0.0000,  0.0000,  0.8848])
-#Maximum relative error:  0.11515683
-#'train' took 0.120477 s
-
-#-------------------------------
-
-##########sample = 10000, gauss_samp_number=30, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.8, lhs = 1.2
-# Drift term:  [0.] + [0.96742857]x^1 + [0.]x^2 + [-0.9115354]x^3 + [0.]x^4
-#diffusion square: tensor([0., 0., 1.])
-#tensor([ 0.,  1.,  0., -1.,  0.,  0.,  1.])
-#tensor([ 0.0000,  0.9674,  0.0000, -0.9115,  0.0000,  0.0000,  0.9158])
-#Maximum relative error:  0.08846462
-#'train' took 0.048631 s
-
-#-----------------------------
-
 

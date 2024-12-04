@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Sep 12 11:07:32 2023
+Created on Tue Sep 12 17:35:53 2023
 
 @author: gly
+
+@email: gly22@mails.tsinghua.edu.cn
 """
+
 
 import torch
 import torch.nn as nn
@@ -67,8 +70,6 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
-        
-        #         (x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         x = (x - self.mu)/self.sigma/np.sqrt(2)
         func = (1/self.sigma/np.sqrt(2))**self.lap_alpha * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
             *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2)*sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
@@ -189,22 +190,11 @@ class Model(object):
             # Construct Xi
         basis2 = []     
         for it in range(self.t_number):
-            basis_count2 = 0
+            basis_count2 = 1
             X = self._get_data_t(it)
-            Xi = torch.zeros(X.size(0),self.basis2_number)
-            Xi[:,0] = 1
-            basis_count2 += 1
-
-            if self.dimension > 1:  
-                for ii in range(0,self.dimension):
-                    for jj in range(ii,self.dimension):
-                        Xi[:,basis_count2] = torch.mul(X[:,ii]** self.xi_q, X[:,jj]** self.xi_q)
-                        basis_count2 += 1
-            else:
-                print("The basis of levy noise is not suitable or dimension is 1")
-                
-                    
-            print("basis_count2",basis_count2)
+            Xi = torch.ones(X.size(0),self.basis2_number)
+            
+            #print("basis_count2",basis_count2)
             print("basis2_number",self.basis2_number)
             print("Xi",Xi)
                 
@@ -229,10 +219,8 @@ class Model(object):
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
-        F_number = self.dimension * self.dimension #* self.basis1_number  #d^2b
-        C_number = self.dimension * self.dimension #* self.basis2_number  #d^2c
-        
-        A = torch.zeros([self.t_number, H_number+F_number+C_number]) #A is a L* (db+d^2b+d^2c)
+        C_number = self.dimension 
+        A = torch.zeros([self.t_number, H_number+C_number]) #A is a L* (db+d^2c)
         rb = torch.zeros(self.t_number)
         b = torch.zeros(self.t_number)
 
@@ -262,19 +250,12 @@ class Model(object):
                     )
                 A[:, kd*self.basis1_number+jb] = H
 
-        # compute A by F_lkj
-        for ld in range(self.dimension):
-            for kd in range(self.dimension):
-                F = 1/self.bash_size * torch.sum(
-                    gauss2[:, :, ld, kd], dim=1
-                    )
-                A[:, H_number] = F
                 
                                
         for ld in range(self.dimension):
             for kd in range(self.dimension):
                 E = -torch.mean(gauss_lap, dim=1)
-                A[:, H_number+1] = E 
+                A[:, H_number] = E 
                 
         rb = 1/self.bash_size * torch.sum(gauss0, dim=1).squeeze()
         dt = (torch.max(self.t)-torch.min(self.t)) / (self.t_number - 1)
@@ -462,15 +443,13 @@ class Model(object):
         else: return w
     
     @utils.timing
-    def compile(self, basis_order, basis_xi_order, gauss_variance, type, drift_term, diffusion_term, xi_term, gauss_samp_way, lhs_ratio):
+    def compile(self, basis_order, gauss_variance, type, drift_term, xi_term, gauss_samp_way, lhs_ratio):
         self.dimension = self.data.shape[-1]
         self.basis_order = basis_order
         self.build_basis()
-        self.basis_xi_order = basis_xi_order
         self.variance = gauss_variance
         self.type = type
         self.drift = drift_term
-        self.diffusion = diffusion_term
         self.xi = xi_term
         self.gauss_samp_way = gauss_samp_way
         self.lhs_ratio = lhs_ratio if self.gauss_samp_way == 'lhs' else 1
@@ -485,350 +464,46 @@ class Model(object):
         print("zeta: ", self.zeta)
 
         drift = [self.zeta[0].numpy()]
-        for i in range(self.basis_number-2):
+        for i in range(self.zeta.numel()-2):
             drift.extend([" + ", self.zeta[i+1].numpy(), 'x^', i+1])
         print("Drift term: ", "".join([str(_) for _ in drift]))
-        self.zeta[-2] = torch.sqrt(self.zeta[-2]*2) #G = (1/2) \sigma \sigma^T
-        print("Diffusion term of Brown Motion: ", self.zeta[-2])
         self.zeta[-1] = (self.zeta[-1])**(2/3) #\Sigma = xi xi^T
         print("Diffusion term of Levy Noise: ", self.zeta[-1])
-        true = torch.cat((self.drift, self.diffusion, self.xi))
+        true = torch.cat((self.drift, self.xi))
         index = torch.nonzero(true).squeeze()
         relative_error = torch.abs((self.zeta.squeeze()[index] - true[index]) / true[index])
         print("Maximum relative error: ", relative_error.max().numpy())
 
 if __name__ == '__main__':
-    np.random.seed(7) 
+    np.random.seed(7) #seed=200;100估计就很差； seed=1000就挺好;
+    #  "SVD did not converge in Linear Least Squares"
     torch.manual_seed(7)
 
     dt = 0.0001
     # t = np.linspace(0, T, int(T/dt) + 1).astype(np.float32)
+    #t = torch.tensor([0.1, 0.3, 0.5])
     #t = torch.tensor([0.2, 0.5, 1.0])
     #t = torch.linspace(0,1,10)
-    #t = torch.tensor([0.1, 0.4, 0.7, 1])
+    t = torch.tensor([0.1, 0.4, 0.7, 1])
 
-    t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    # t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     #t = torch.tensor([0.2, 0.5, 1])
     # data = scipy.io.loadmat('./data/data1d.mat')['bb'].astype(np.float32)
     # data = torch.tensor(data).unsqueeze(-1)
-    # drift = torch.tensor([0, -3, -0.5, 4, 0.5, -1])   # -(x+1.5)(x+1)x(x-1)(x-2)
-    # drift = torch.tensor([0, -24, 50, -35, 10, -1])     # -x(x-1)(x-2)(x-3)(x-4)
-    # drift = torch.tensor([0, -4, 0, 5, 0, -1])  # -x(x-1)(x+1)(x-2)(x+2)
+    
     drift = torch.tensor([0, 1, 0, -1])
     diffusion = torch.tensor([1.0])
-    xi = torch.tensor([0.5])
+    xi = torch.tensor([1.0])
     samples = 10000
-    label = "train"
     dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1,
                       drift_term=drift, diffusion_term=diffusion, xi_term=xi, alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]),
-                      label = label, explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
+                      explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
     data = dataset.get_data(plot_hist=False)
     print("data: ", data.shape, data.max(), data.min())
 
     testFunc = Gaussian
     model = Model(t, data, testFunc)
-    model.compile(basis_order=3,basis_xi_order=1, gauss_variance=0.45, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, xi_term=xi,
-                  gauss_samp_way='lhs', lhs_ratio=0.85)
-    model.train(gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05)
-    
-    
-    ############# xi = torch.tensor([0.5]) 
-   #t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-   ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.45, lhs = 0.85  
-   #Drift term:  [0.] + [0.981372]x^1 + [0.]x^2 + [-1.0069848]x^3
-   #Diffusion term of Brown Motion:  tensor([0.9993])
-   #Diffusion term of Levy Noise:  tensor([0.5026])
-   #Maximum relative error:  0.018628001
-   #'train' took 4.521276 s
-    
-        
-        
- ############# xi = torch.tensor([0.2]) 
-#t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.45, lhs = 0.9  
-#Drift term:  [0.] + [1.0059993]x^1 + [0.]x^2 + [-1.0146062]x^3
-#Diffusion term of Brown Motion:  tensor([0.9890])
-#Diffusion term of Levy Noise:  tensor([0.2036])
-#Maximum relative error:  0.018057674
-#'train' took 3.437077 s
-
-#-------------------
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.45, lhs = 0.85 
-#Drift term:  [0.] + [1.0061533]x^1 + [0.]x^2 + [-1.011826]x^3
-#Diffusion term of Brown Motion:  tensor([0.9894])
-#Diffusion term of Levy Noise:  tensor([0.1996])
-#Maximum relative error:  0.011826038
-#'train' took 2.588854 s
-#---------------------------
-
-
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.45, lhs = 0.9  
-#变大
-
-
-
-
-
-
-      
- ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 1.0, lhs = 0.75  
- # Drift term:  [0.] + [1.0198165]x^1 + [0.]x^2 + [-1.0773958]x^3
- #Diffusion term of Brown Motion:  tensor([1.0032])
- #Diffusion term of Levy Noise:  tensor([0.2257])
- #Maximum relative error:  0.12860276
- #'train' took 2.089594 s      
-        
-  ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 1.0, lhs = 0.85  
-  # Drift term:  [0.] + [1.0108026]x^1 + [0.]x^2 + [-1.0723257]x^3
-  #Diffusion term of Brown Motion:  tensor([1.0152])
-  #Diffusion term of Levy Noise:  tensor([0.2104])
-  #Maximum relative error:  0.07232571
-  #'train' took 2.156629 s   
-
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.95, lhs = 0.85  
-#Drift term:  [0.] + [0.99895173]x^1 + [0.]x^2 + [-1.0620492]x^3
-#Diffusion term of Brown Motion:  tensor([1.0134])
-#Diffusion term of Levy Noise:  tensor([0.2132])
-#Maximum relative error:  0.06586
-#'train' took 0.725793 s
-  
-        
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 1.0, lhs = 0.95  
-# Drift term:  [0.] + [1.0051951]x^1 + [0.]x^2 + [-1.0709755]x^3
-#Diffusion term of Brown Motion:  tensor([1.0179])
-#Diffusion term of Levy Noise:  tensor([0.2111])
-#Maximum relative error:  0.07097554
-#'train' took 1.813320 s       
-
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.95, lhs = 0.95  
-#Drift term:  [0.] + [0.9963114]x^1 + [0.]x^2 + [-1.0629027]x^3
-#Diffusion term of Brown Motion:  tensor([1.0125])
-#Diffusion term of Levy Noise:  tensor([0.2186])
-#Maximum relative error:  0.09318657
-#'train' took 0.701699 s
-        
- ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 1.0, lhs = 1.0  
- #  Drift term:  [0.] + [1.0091192]x^1 + [0.]x^2 + [-1.0754501]x^3
- #Diffusion term of Brown Motion:  tensor([1.0152])
- #Diffusion term of Levy Noise:  tensor([0.2168])
- #Maximum relative error:  0.08383706
- #'train' took 2.330108 s     
- 
- #虽然整体误差大了，但是drift学的准确
- ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.95, lhs = 1.0  
- # Drift term:  [0.] + [1.0017748]x^1 + [0.]x^2 + [-1.0688145]x^3
- #Diffusion term of Brown Motion:  tensor([1.0097])
- #Diffusion term of Levy Noise:  tensor([0.2243])
- #Maximum relative error:  0.12140624
- #'train' took 2.246452 s        
-        
- ##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.9, lhs = 1.0  
- #Drift term:  [0.] + [0.9943024]x^1 + [0.]x^2 + [-1.0617408]x^3
- #Diffusion term of Brown Motion:  tensor([1.0040])
- #Diffusion term of Levy Noise:  tensor([0.2316])
- #Maximum relative error:  0.15797809
- #'train' took 2.486408 s       
-        
-        
-        
-        
-        
-        
-        
-        
-        
-           
-        
- ################
-
-# 用含Gaussian和levy两组基去学习得到的
-
-################       
-
-############## xi = torch.tensor([1.0])
-        
-             
-        
-        
- ##### (1) t = torch.tensor([0.1, 0.4, 0.7, 1.0])     
-  
-##########sample = 10000, gauss_samp_number=100, lam=0.02 （或者0.0）, STRidge_threshold=0.1（或者0.2，结果一样）, gauss_var = 0.95, lhs = 0.9
-    #Drift term:  [0.] + [0.8734925]x^1 + [0.]x^2 + [-0.93648255]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9173])
-    #Diffusion term of Levy Noise:  tensor([1.0145])
-    #Maximum relative error:  0.12650752
-    #'train' took 1.610035 s (没乘1.03)
-  
-##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.2, gauss_var = 0.95, lhs = 0.95
-    #Drift term:  [0.] + [0.86041343]x^1 + [0.]x^2 + [-0.9271305]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9658])
-    #Diffusion term of Levy Noise:  tensor([0.9865])
-    #Maximum relative error:  0.13958657
-    #'train' took 1.845096 s
-
-
-##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.2, gauss_var = 0.95, lhs = 0.92
-    #Drift term:  [0.] + [0.87223333]x^1 + [0.]x^2 + [-0.9349003]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9343])
-    #Diffusion term of Levy Noise:  tensor([1.0046])
-    #Maximum relative error:  0.12776667
-    #'train' took 1.874035 s
-    
-    
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.9, lhs = 0.92
-    # Drift term:  [0.] + [0.8984596]x^1 + [0.]x^2 + [-0.94664985]x^3
-    #Diffusion term of Brown Motion:  tensor([0.8632])
-    #Diffusion term of Levy Noise:  tensor([1.0402])
-    #Maximum relative error:  0.13682973
-    #'train' took 1.274552 s
-     
- ##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.1, gauss_var = 1.0, lhs = 0.9
-     #Drift term:  [0.] + [0.87764007]x^1 + [0.]x^2 + [-0.93691117]x^3
-     #Diffusion term of Brown Motion:  tensor([0.9140])
-     #Diffusion term of Levy Noise:  tensor([1.0133])
-     #Maximum relative error:  0.12235993
-     #'train' took 0.926758 s   
-     
-##########sample = 10000, gauss_samp_number=50, lam=0.005, STRidge_threshold=0.1, gauss_var = 1.0, lhs = 0.9
-    #Drift term:  [0.] + [0.87764007]x^1 + [0.]x^2 + [-0.93691117]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9140])
-    #Diffusion term of Levy Noise:  tensor([1.0133])
-    #Maximum relative error:  0.12235993
-    #'train' took 0.692720 s
-    
-##########sample = 10000, gauss_samp_number=50, lam=0.005, STRidge_threshold=0.1, gauss_var = 1.1, lhs = 0.9
-    # error变大
-    
- ##########sample = 10000, gauss_samp_number=80, lam=0.005, STRidge_threshold=0.1, gauss_var = 1.0, lhs = 0.9   
-    #Drift term:  [0.] + [0.88194793]x^1 + [0.]x^2 + [-0.9428406]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9385])
-    #Diffusion term of Levy Noise:  tensor([1.0033])
-    #Maximum relative error:  0.118052065
-    #'train' took 1.104586 s
-    
-##########sample = 10000, gauss_samp_number=75, lam=0.005, STRidge_threshold=0.1, gauss_var = 1.0, lhs = 0.9   
-       
-    #Drift term:  [0.] + [0.8914281]x^1 + [0.]x^2 + [-0.948983]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9256])
-    #Diffusion term of Levy Noise:  tensor([1.0115])
-    #Maximum relative error:  0.10857189
-    #'train' took 0.943515 s
-    
-##########sample = 10000, gauss_samp_number=70, lam=0.005, STRidge_threshold=0.1, gauss_var = 1.0, lhs = 0.9   
-       
-    # Drift term:  [0.] + [0.8943298]x^1 + [0.]x^2 + [-0.950215]x^3
-    #Diffusion term of Brown Motion:  tensor([0.9276])
-    #Diffusion term of Levy Noise:  tensor([1.0083])
-    #Maximum relative error:  0.10567021
-    #'train' took 1.021149 s
-
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 0.75  
-#Drift term:  [0.] + [0.9025586]x^1 + [0.]x^2 + [-0.9541948]x^3
-#Diffusion term of Brown Motion:  tensor([0.9374])
-#Diffusion term of Levy Noise:  tensor([1.0146])
-#Maximum relative error:  0.097441375
-#'train' took 1.333390 s
-
-##########sample = 10000, gauss_samp_number=80, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 0.75  
-# Drift term:  [0.] + [0.90533805]x^1 + [0.]x^2 + [-0.9547661]x^3
-#Diffusion term of Brown Motion:  tensor([0.9315])
-#Diffusion term of Levy Noise:  tensor([1.0208])
-#Maximum relative error:  0.09466195
-#'train' took 1.215698 s
-
-#--------------------------------------
-
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 0.75  
-# Drift term:  [0.] + [0.91395336]x^1 + [0.]x^2 + [-0.9585366]x^3
-#Diffusion term of Brown Motion:  tensor([0.9221])
-#Diffusion term of Levy Noise:  tensor([1.0262])
-#Maximum relative error:  0.086046636
-#'train' took 0.914090 s
-
-#------------------------------------
-
-##########sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 1.0, lhs = 0.75  
-#同上
-
-##########sample = 10000, gauss_samp_number=60, lam=0.0, STRidge_threshold=0.2, gauss_var = 1.0, lhs = 0.75  
-#Drift term:  [0.] + [0.916197]x^1 + [0.]x^2 + [-0.958148]x^3
-#Diffusion term of Brown Motion:  tensor([0.9017])
-#Diffusion term of Levy Noise:  tensor([1.0339])
-#Maximum relative error:  0.098341525
-#'train' took 1.198055 s
-
-
-
-   
-    
-    
-    
-    
-      
-        
- ##### (2) t = torch.tensor([0.2, 0.5, 1.0])
-            
-        
-##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.2, gauss_var = 0.75, lhs = 1.0
-     ##### t = torch.tensor([0.2, 0.5, 1.0])
-     # diffusion=1; xi = 1:   
-         #Drift term:  [0.] + [0.8462193]x^1 + [0.]x^2 + [-0.89018095]x^3
-         #Diffusion term of Brown Motion:  tensor([1.0578])
-         #Diffusion term of Levy Noise:  tensor([0.8686])
-         #Maximum relative error:  0.1537807
-         #'train' took 1.771243 s
-         
-         
-##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.2, gauss_var = 0.75, lhs = 0.75
-     ##### t = torch.tensor([0.2, 0.5, 1.0])
-     # diffusion=1; xi = 1:  
-         
-        #Drift term:  [0.] + [0.85324836]x^1 + [0.]x^2 + [-0.9026397]x^3
-        #Diffusion term of Brown Motion:  tensor([1.0283])
-        #Diffusion term of Levy Noise:  tensor([0.9023])
-        #Maximum relative error:  0.14675164
-        #'train' took 1.590582 s
-
-##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.1, gauss_var = 0.72, lhs = 0.75
-     # diffusion=1; xi = 1:          
-    #Drift term:  [0.] + [0.85202056]x^1 + [0.]x^2 + [-0.9014467]x^3
-    #Diffusion term of Brown Motion:  tensor([1.0144])
-    #Diffusion term of Levy Noise:  tensor([0.9113])
-    #Maximum relative error:  0.14797944
-    #'train' took 1.716157 s
-    
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.2, gauss_var = 0.72, lhs = 0.75
-     # diffusion=1; xi = 1:   同上
-          
-        
- ##########sample = 10000, gauss_samp_number=100, lam=0.02, STRidge_threshold=0.1, gauss_var = 0.72, lhs = 0.78
-      #       Drift term:  [0.] + [0.8137923]x^1 + [0.]x^2 + [-0.8807643]x^3
-      #Diffusion term of Brown Motion:  tensor([1.0276])
-      #Diffusion term of Levy Noise:  tensor([0.9031])
-      #Maximum relative error:  0.18620771
-      #'train' took 1.982755 s
-        
-        
-##########sample = 10000, gauss_samp_number=120, lam=0.02, STRidge_threshold=0.1, gauss_var = 0.72, lhs = 0.75
-     # diffusion=1; xi = 1:          
-     # Drift term:  [0.] + [0.8456846]x^1 + [0.]x^2 + [-0.896343]x^3
-     #Diffusion term of Brown Motion:  tensor([1.0409])
-     #Diffusion term of Levy Noise:  tensor([0.8909])
-     #Maximum relative error:  0.15431541
-     #'train' took 2.241779 s   
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    model.compile(basis_order=3, gauss_variance=1.3, type='LMM_2_nonequal', drift_term=drift, xi_term=xi,\
+                  gauss_samp_way='lhs', lhs_ratio=1.0)
+    model.train(gauss_samp_number=70, lam=0.0, STRidge_threshold=0.2)
         

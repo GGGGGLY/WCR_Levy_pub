@@ -1,15 +1,3 @@
-"""
-Function: data-driven reveal SDE by the weak form of FKE: 1. linear regression 2. adversarial update
-@author pi square 
-@email: hpp1681@gmail.com
-created in Oct 11, 2021
-update log:
-    0. Oct 11, 2021: created
-    1. Oct 15, 2021: change time index loop to Tensor form including the time index as the first dimension
-    2. Oct 28, 2021: fix bugs of self.t_number -> self.bash_size
-    3. Dec 9, 2021: modifies the adversarial.py to weak_gaussian_sampling for sampling in the test function
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -28,8 +16,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class Gaussian(torch.nn.Module): 
     def __init__(self, mu, sigma):
-        super(Gaussian, self).__init__()  #gaussian()里面不是object,就需要super
-        #if 下面用到了nn.Module, e.g. nn.Linear(),就要定义类的时候，里面要加上nn.Module
+        super(Gaussian, self).__init__()  
         self.mu = mu
         self.sigma = sigma
 
@@ -459,106 +446,4 @@ if __name__ == '__main__':
     model.compile(basis_order=3, gauss_variance=0.5, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion,
                   gauss_samp_way='lhs', lhs_ratio=1.0)
     model.train(gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05)
-    
-    
-    ###############################
-    ####用gauss学levy
-    ##################################
-    
-    ########### xi = [0.2]
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.3, lhs = 1.0
-    # Drift term:  [0.] + [0.96494144]x^1 + [0.]x^2 + [-0.8839541]x^3
-    #Diffusion term:  tensor([0.9853])
-    #Maximum relative error:  0.11604589
-    #'train' took 1.169261 s
-    
-   ########### xi = [0.2]
-   #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.35, lhs = 1.0
-   # Drift term:  [0.] + [0.9639844]x^1 + [0.]x^2 + [-0.9052192]x^3
-   #Diffusion term:  tensor([1.0036])
-   #Maximum relative error:  0.0947808
-   #'train' took 0.404987 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.4, lhs = 1.0
-    #Drift term:  [0.] + [0.96275425]x^1 + [0.]x^2 + [-0.9234086]x^3
-    #Diffusion term:  tensor([1.0188])
-    #Maximum relative error:  0.07659137
-    #'train' took 0.383007 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.45, lhs = 1.0
-    #Drift term:  [0.] + [0.961653]x^1 + [0.]x^2 + [-0.9383641]x^3
-    #Diffusion term:  tensor([1.0316])
-    #Maximum relative error:  0.06163591
-    #'train' took 0.104055 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.05, gauss_var = 0.5, lhs = 1.0
-    # Drift term:  [0.] + [0.9606894]x^1 + [0.]x^2 + [-0.9507338]x^3
-    #Diffusion term:  tensor([1.0426])
-    #Maximum relative error:  0.04926622
-    #'train' took 0.126922 s
-    
-    
-    
-    
-    
-    #################### xi= [1.0]
-    
-    ##t = torch.tensor([0.1, 0.4, 0.7, 1.0])
-    
-    #####sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.1, gauss_var = 1, lhs = 1
-        # Drift term:  [0.] + [0.632241]x^1 + [0.]x^2 + [-0.73889804]x^3
-        #Diffusion term:  tensor([1.6414])
-        #Maximum relative error:  0.64143205
-        #'train' took 0.144433 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 1, lhs = 0.75
-        # Drift term:  [0.] + [0.7130028]x^1 + [0.]x^2 + [-0.7798967]x^3
-        #Diffusion term:  tensor([1.6549])
-        #Maximum relative error:  0.65488577
-        #'train' took 0.191343 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.7, lhs = 0.75
-        # Drift term:  [0.] + [0.99688]x^1 + [0.]x^2 + [-0.880472]x^3
-        #Diffusion term:  tensor([1.5259])
-        #Maximum relative error:  0.5258554
-        #'train' took 0.104093 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.6, lhs = 1.0
-        # Drift term:  [0.] + [0.93889356]x^1 + [0.]x^2 + [-0.8067515]x^3
-        #Diffusion term:  tensor([1.4414])
-        #Maximum relative error:  0.44138432
-        #'train' took 0.169740 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.5, lhs = 1.0
-        # Drift term:  [0.] + [0.9546841]x^1 + [0.]x^2 + [-0.7838675]x^3
-        #Diffusion term:  tensor([1.3743])
-        #Maximum relative error:  0.37431943
-        #'train' took 0.378334 s
-    
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.4, lhs = 1.0
-        # Drift term:  [0.12581046] + [0.9356653]x^1 + [0.]x^2 + [-0.7698224]x^3
-        #Diffusion term:  tensor([1.3204])
-        #Maximum relative error:  0.32035136
-        #'train' took 0.545102 s
-        
-    #####sample = 10000, gauss_samp_number=70, lam=0.0, STRidge_threshold=0.1, gauss_var = 0.3, lhs = 1.0
-        # Drift term:  [0.15406711] + [0.924237]x^1 + [0.]x^2 + [-0.732018]x^3
-        #Diffusion term:  tensor([1.2444])
-        #Maximum relative error:  0.267982
-        #'train' took 0.300222 s    
-        
-        
-    
-    
-    
-    
-    
-    
-    #### 用gauss学gauss
-    
-    # t = torch.linspace(0,1,10)
-    #Drift term:  [0.] + [1.0014249]x^1 + [0.]x^2 + [-0.9725606]x^3
-    #Diffusion term:  tensor([0.9977])
-    #Maximum relative error:  0.027439415
-    #'train' took 0.194566 s
     

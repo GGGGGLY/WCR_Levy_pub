@@ -1,21 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Oct  3 15:04:07 2023
+Created on Thu Jul 13 15:34:22 2023
+
+Black scholes
 
 @author: gly
 """
+
 
 import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
-from generate_data_BS_levy import DataSet
+from generate_data_BS import DataSet
 import time
 import utils
 import scipy.io
 import scipy.special as sp
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+import seaborn as sns
+from scipy import stats
 
 #save.tensor
 class Gaussian(torch.nn.Module): 
@@ -60,10 +70,11 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
+        #         (x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         x = (x - self.mu)/self.sigma/np.sqrt(2)
         func = (1/self.sigma/np.sqrt(2))**self.lap_alpha * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
             *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2)*sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
-        return func 
+        return func  ##1/(2*pi)
     
     def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
         g0 = self.gaussZero(x)
@@ -99,9 +110,11 @@ class Model(object):
         self.basis1_number = None
         self.basis2_number = None
         self.basis_order = None
+        self.BasisSigma_order = None
+        self.basis_theta = None
+        self.basis_theta2 = None
         self.bash_size = data.shape[1]
-        self.basis_xi_order = None
-        
+
         self.zeta = None # coefficients of the unknown function
         self.error_tolerance = None
         self.max_iter = None
@@ -113,7 +126,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  # three dim: time，num_of_traj，dim_of_problem
         return X
     
     @utils.timing # decorator
@@ -122,12 +135,21 @@ class Model(object):
         """build the basis list for the different time snapshot 
         """
         self.t_number = len(self.t)
-        self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
+        self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)\
                 /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
         
-        self.basis2_number =1
+        # sigma的基是1,x, 那么G(=(1/2)*sigma^2)的基为 1, x, x^2    
+        # BasisSigma_order=1 (basis: {1, x}); BasisSigma_order*2=2  (basis: {1, x, x^2, x^4})  
+       
+        self.basis2_number = int(np.math.factorial(self.dimension+self.BasisSigma_order)\
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.BasisSigma_order)))
+        
+        #basis_order = 1 用1阶多项式展开
+        #self.basis_number 展开有多少项 一维时，basis number = basis order;  二维时，basis order = 2, basis number = 6(1, x,y,x^2, y^2, xy)
+
+
         # Construct Theta
-        basis1 = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+        basis1 = [] 
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count1 = 0
@@ -176,18 +198,45 @@ class Model(object):
             basis1.append(Theta)
             basis_theta = torch.stack(basis1)
             # print("X", X)
-        #print("basis_theta", basis_theta.shape) # torch.Size([6, 10000, 4]) L*N*b
-            
-            
-            # Construct Xi    
-        X = self.data
-        basis_xi = torch.abs(X)**(3/2)  
-        self.basis_xi = basis_xi
+        print("basis_theta", basis_theta.shape)
         
-        self.basis_theta = basis_theta   
-        self.basis = torch.cat([basis_theta, basis_xi],dim=2)         
-        print("self.basis.shape", self.basis.shape)
+        basis2 =[]  #3
+        for it in range(self.t_number):
+            X = self._get_data_t(it)
+            basis_count2 = 0
+            Theta2 = torch.zeros(X.size(0),self.basis2_number)
+            Theta2[:,0] = 1
+            basis_count2 += 1
+            for ii in range(0,self.dimension):
+                Theta2[:,basis_count2] = X[:,ii]
+                basis_count2 += 1
+
+            if self.BasisSigma_order >= 2:
+                for ii in range(0,self.dimension):
+                    for jj in range(ii,self.dimension):
+                        Theta2[:,basis_count2] = torch.mul(X[:,ii],X[:,jj])
+                        basis_count2 += 1
+
+            if self.BasisSigma_order >= 3:
+                for ii in range(0,self.dimension):
+                    for jj in range(ii,self.dimension):
+                        for kk in range(jj,self.dimension):
+                            Theta2[:,basis_count2] = torch.mul(torch.mul(X[:,ii],
+                                X[:,jj]),X[:,kk])
+                            basis_count2 += 1
+            
+            assert basis_count2 == self.basis2_number
+            basis2.append(Theta2)
+            basis_theta2 = torch.stack(basis2)
+        
+    
         self.basis_number = self.basis1_number + self.basis2_number
+        self.basis_theta = basis_theta
+        self.basis_theta2 = basis_theta2
+        self.basis = torch.cat([basis_theta, basis_theta2],dim=2)  
+        print("self.basis.shape", self.basis.shape)
+        #print("self.basis1_number ", self.basis1_number)
+        
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
@@ -199,9 +248,9 @@ class Model(object):
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
-        C_number = self.dimension 
+        F_number = self.dimension * self.basis2_number #* self.basis1_number  #d^2b
         
-        A = torch.zeros([self.t_number, H_number+C_number]) #A is a L* (db+d)
+        A = torch.zeros([self.t_number, H_number+F_number]) #A is a L* (db+d^2b+d^2c)
         rb = torch.zeros(self.t_number)
         b = torch.zeros(self.t_number)
 
@@ -215,34 +264,27 @@ class Model(object):
         # Phi = self.net(TX)
         gauss0 = gauss(TX, diff_order=0)
         gauss1 = gauss(TX, diff_order=1)
-        #gauss2 = gauss(TX, diff_order=2)
-        gauss_lap = gauss(TX, diff_order='frac')
+        gauss2 = gauss(TX, diff_order=2)
+        #gauss_lap = gauss(TX, diff_order='frac')
         
 
-        # print("self.basis_number", self.basis_number)
-        # print("self.dimension", self.dimension)
         for kd in range(self.dimension):
             for jb in range(self.basis1_number):
                 # print("gauss1[:, :, %s]" % kd, gauss1[:, :, kd].size())
-                H = 1/self.bash_size * torch.sum(
-                    gauss1[:, :, kd]
-                     *
-                    self.basis_theta[:, :, jb], dim=1
-                    )
+                H = 1/self.bash_size * torch.sum( gauss1[:, :, kd] * self.basis_theta[:, :, jb], dim=1)
+                # L*N (d个), L*N (b1个)
                 A[:, kd*self.basis1_number+jb] = H
 
+        # compute A by F_lkj
+        for kd in range(self.dimension):
+            for jb in range(self.basis2_number): # (1/2) \cdot \sigma \cdot \sigma^T \cdot (\partial_{ij}\psi)
+            # (\partial_{ij}\psi)  L* N* d* d; 
+            # self.basis_theta2  L* N* b2
+                F = 1/self.bash_size * torch.sum(
+                    gauss2[:, :, kd, kd] * (self.basis_theta2[:, :, jb]), dim=1
+                    )
+                A[:, H_number+ kd*self.basis2_number+ jb] = F
                 
-                               
-        for ld in range(self.dimension):
-            # self.basis_xi  L*N*1
-            # gauss_lap L*N
-            # print("basis_xi.shape", self.basis_xi.shape) torch.Size([5, 10000, 1])
-            E = -1/self.bash_size * torch.sum(
-                gauss_lap * self.basis_xi[:, :, ld], dim=1
-                )
-            #E = -torch.mean(gauss_lap * self.basis_xi[:, :, 0] , dim=1) 
-            #print("E.shape", E.shape)
-            A[:, H_number] = E 
                 
         rb = 1/self.bash_size * torch.sum(gauss0, dim=1).squeeze()
         dt = (torch.max(self.t)-torch.min(self.t)) / (self.t_number - 1)
@@ -251,6 +293,13 @@ class Model(object):
         # b = torch.tensor(torch.enable_grad()(utils.compute_b)(rb, dt, time_diff='Tik'))
         # print("b.shape", b.shape)
 
+        # plt.clf()
+        # plt.plot(rb.detach().numpy(),'-*')
+        # plt.plot(b.detach().numpy(),'-o')
+        # plt.draw()
+        # plt.pause(1)
+
+        # print("b", b)
         # print("A.shape", A.shape)
         if self.type == 'PDEFind':
             b = torch.tensor(torch.enable_grad()(utils.compute_b)(rb, dt, time_diff='Tik'))
@@ -325,8 +374,9 @@ class Model(object):
                 bb[i] = rb[i + 2] - rb[i + 1]
             return AA, bb
     def sampleTestFunc(self, samp_number):
+        # for i in range(self.sampling_number):
         if self.gauss_samp_way == 'lhs':
-            mu_list = self.lhs_ratio * torch.rand(samp_number)*(self.data.max()*0.4 -self.data.min()*0.4) + self.data.min()*0.4
+            mu_list = self.lhs_ratio * torch.rand(samp_number)*(self.data.max()-self.data.min()) + self.data.min()
         if self.gauss_samp_way == 'SDE':
             if samp_number <= self.bash_size:
                 index = np.arange(self.bash_size)
@@ -343,12 +393,13 @@ class Model(object):
         for i in range(mu_list.shape[0]):
             mu = mu_list[i]
             sigma = sigma_list[i]
-            gauss = self.net(mu, sigma, 3/2) #########alpha在哪赋值？？？
+            #gauss = self.net(mu, sigma)
+            gauss = self.net(mu, sigma,3/2) #########alpha在哪赋值？？？
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)
-        #print("A_list", A_list)
-        #print("b_list", b_list)
+        # print("A_list", A_list)
+        # print("b_list", b_list)
         self.A = torch.cat(A_list, dim=0) # 2-dimension
         self.b = torch.cat(b_list, dim=0).unsqueeze(-1) # 1-dimension
 
@@ -421,15 +472,15 @@ class Model(object):
         else: return w
     
     @utils.timing
-    def compile(self, basis_order, basis_xi_order, gauss_variance, type, drift_term, xi_term, gauss_samp_way, lhs_ratio):
+    def compile(self, basis_order, BasisSigma_order, gauss_variance, type, drift_term, diffusion_term, gauss_samp_way, lhs_ratio):
         self.dimension = self.data.shape[-1]
         self.basis_order = basis_order
+        self.BasisSigma_order = BasisSigma_order
         self.build_basis()
-        self.basis_xi_order = basis_xi_order
         self.variance = gauss_variance
         self.type = type
         self.drift = drift_term
-        self.xi = xi_term
+        self.diffusion = diffusion_term
         self.gauss_samp_way = gauss_samp_way
         self.lhs_ratio = lhs_ratio if self.gauss_samp_way == 'lhs' else 1
 
@@ -443,22 +494,27 @@ class Model(object):
         print("zeta: ", self.zeta)
 
         drift = [self.zeta[0].numpy()]
-        for i in range(self.basis_number-2):
+        for i in range(self.basis1_number):
             drift.extend([" + ", self.zeta[i+1].numpy(), 'x^', i+1])
         print("Drift term: ", "".join([str(_) for _ in drift]))
-        self.zeta[-1] = (self.zeta[-1])**(2/3) #\Sigma = xi xi^T
-        print("Diffusion term of Levy Noise: ", self.zeta[-1])
-        xi_para = torch.unsqueeze(self.xi[1], dim=0)    #torch.tensor(self.xi[1])
-        #print("xi_para", xi_para)
-        true = torch.cat((self.drift, xi_para))
+        
+        Start_ = int(self.basis1_number)
+        self.zeta[Start_: ] = self.zeta[Start_: ]*2
+        
+        diffusion_const = self.diffusion[0] 
+        diffusion_linear = self.diffusion[1] 
+        diffu_square0 = [diffusion_const**2]
+        diffu_square1 = [2*diffusion_const*diffusion_linear]
+        diffu_square2 = [diffusion_linear**2]
+        diffu_square = diffu_square0 + diffu_square1 + diffu_square2
+        diffu_square = torch.tensor(diffu_square)
+        print("diffusion square:", diffu_square)
+        true = torch.cat((self.drift, diffu_square))
+        print(true) # tensor([ 0.,  1.,  0., -1.,  0.,  1.])
+        print(self.zeta.squeeze()) # tensor([ 0.0019,  0.0448, -0.0078,  0.3569,  0.3294])
         index = torch.nonzero(true).squeeze()
         relative_error = torch.abs((self.zeta.squeeze()[index] - true[index]) / true[index])
         print("Maximum relative error: ", relative_error.max().numpy())
-        drift_est = self.zeta[: self.basis1_number]
-        xi_est = self.zeta[-1]
-        zz = torch.zeros(1)
-        xi_est = torch.cat((zz, xi_est),0)
-        return drift_est, xi_est
 
 if __name__ == '__main__':
     np.random.seed(7) 
@@ -470,20 +526,27 @@ if __name__ == '__main__':
     #t = torch.tensor([0.2, 0.5, 1.0])
     #t = torch.linspace(0,1,10)
     t = torch.tensor([0.1, 0.3, 0.4, 0.7, 1])
+    # t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    #t = torch.tensor([0.2, 0.5, 1])
+    # data = scipy.io.loadmat('./data/data1d.mat')['bb'].astype(np.float32)
+    # data = torch.tensor(data).unsqueeze(-1)
+    # drift = torch.tensor([0, -3, -0.5, 4, 0.5, -1])   # -(x+1.5)(x+1)x(x-1)(x-2)
+    # drift = torch.tensor([0, -24, 50, -35, 10, -1])     # -x(x-1)(x-2)(x-3)(x-4)
+    # drift = torch.tensor([0, -4, 0, 5, 0, -1])  # -x(x-1)(x+1)(x-2)(x+2)
     drift = torch.tensor([0, 1, 0, -1])
-    xi = torch.tensor([0, 1.0])
+    diffusion = torch.tensor([0, 1.0])
     samples = 10000
-    dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1, drift_term=drift, xi_term=xi, \
-                      alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]), label = "Levy", explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
+    BasisSigma_order=1
+    dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1, drift_term=drift, diffusion_term=diffusion,\
+                      alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]),\
+                      explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
     data = dataset.get_data(plot_hist=False)
     print("data: ", data.shape, data.max(), data.min())
 
     testFunc = Gaussian
     model = Model(t, data, testFunc)
-    model.compile(basis_order=3,basis_xi_order=1, gauss_variance=0.3, type='LMM_2_nonequal', drift_term=drift, xi_term=xi,\
-                  gauss_samp_way='lhs', lhs_ratio=1.0)
-    drift_est, xi_est = model.train(gauss_samp_number=50, lam=0.0, STRidge_threshold=0.1)
+    model.compile(basis_order=3, BasisSigma_order=BasisSigma_order*2, gauss_variance=1.8, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, \
+                  gauss_samp_way='lhs', lhs_ratio=1.2)
+    model.train(gauss_samp_number=20, lam=0.0, STRidge_threshold=0.2)
     
-  
-    
-  
+        

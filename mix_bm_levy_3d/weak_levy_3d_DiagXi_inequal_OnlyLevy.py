@@ -66,11 +66,10 @@ class Gaussian(torch.nn.Module):
     def LapGauss_VaryDim(self,x, g0):
         func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
         for k in range(x.shape[2]):
-            # 对第k个变量求分数阶导数
+            # Find the fractional derivative of the kth variable
             func_k = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
                     1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
         
-        #其余变量没有求导，但是密度函数仍然包含
             func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
                 0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
            

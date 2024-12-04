@@ -93,22 +93,6 @@ class DataSet(object):
         X =  torch.sin(self.alpha_levy*V)/torch.cos(V)**(1/self.alpha_levy)*(torch.cos((1-self.alpha_levy)*V)/W)**((1-self.alpha_levy)/self.alpha_levy)
         return X
     
-    #def levy_variable(self):
-    #    V = (torch.rand(self.samples_num,1)*np.pi - np.pi/2)*0.99999
-    #    U = torch.rand(self.samples_num,1)*0.99999
-    #    W = -torch.log(U+1e-6)
-    #    X =  torch.sin(self.alpha_levy*V)/torch.cos(V)**(1/self.alpha_levy)*(torch.cos((1-self.alpha_levy)*V)/W)**((1-self.alpha_levy)/self.alpha_levy)
-     #   LEVY = X
-     #   for k in range(1, self.dim):
-     #       V = (torch.rand(self.samples_num,1)*np.pi - np.pi/2)*0.99999
-     #       U = torch.rand(self.samples_num,1)*0.99999
-     #       W = -torch.log(U+1e-6)
-     #       X =  torch.sin(self.alpha_levy*V)/torch.cos(V)**(1/self.alpha_levy)*(torch.cos((1-self.alpha_levy)*V)/W)**((1-self.alpha_levy)/self.alpha_levy)
-     #       LEVY = torch.cat((LEVY, X), dim=1)
-     #   return LEVY
-    
-    
-    
     def subSDE_simu(self, t0, t1, x1, x2):
         if t0 == t1:
             return x1
