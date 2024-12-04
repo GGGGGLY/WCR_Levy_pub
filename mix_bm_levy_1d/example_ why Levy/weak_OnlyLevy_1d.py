@@ -30,8 +30,7 @@ from scipy import stats
 #save.tensor
 class Gaussian(torch.nn.Module): 
     def __init__(self, mu, sigma, lap_alpha):
-        super(Gaussian, self).__init__()  #gaussian()里面不是object,就需要super
-        #if 下面用到了nn.Module, e.g. nn.Linear(),就要定义类的时候，里面要加上nn.Module
+        super(Gaussian, self).__init__()  
         self.mu = mu
         self.sigma = sigma
         self.lap_alpha = lap_alpha
@@ -75,7 +74,7 @@ class Gaussian(torch.nn.Module):
             *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2)*sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
         return func  ##1/(2*pi)
     
-    def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
+    def forward(self, x, diff_order=0): 
         g0 = self.gaussZero(x)
         if diff_order == 0:
             return g0

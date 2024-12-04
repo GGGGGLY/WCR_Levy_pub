@@ -165,7 +165,7 @@ class DataSet(object):
                             self.explosion_prevention_N = self.explosion_prevention_N + 1
                 return y
             
-        elif self.drift_term.shape == torch.Size([self.dim, 2*self.dim + 1]):  ###不是potential, data reach to infty
+        elif self.drift_term.shape == torch.Size([self.dim, 2*self.dim + 1]):  
             """
             2-order polynomial, no cross terms, e.g. {1, x1, x2, x3, x1^2, x2^2, x3^2}
             """

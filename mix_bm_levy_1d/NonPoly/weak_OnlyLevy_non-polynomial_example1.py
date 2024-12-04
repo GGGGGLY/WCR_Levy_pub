@@ -89,7 +89,7 @@ class Gaussian(torch.nn.Module):
    
     
     
-    def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
+    def forward(self, x, diff_order=0): 
         g0 = self.gaussZero(x)
         if diff_order == 0:
             return g0

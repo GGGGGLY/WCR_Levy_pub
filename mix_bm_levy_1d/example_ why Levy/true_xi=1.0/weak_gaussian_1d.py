@@ -28,8 +28,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class Gaussian(torch.nn.Module): 
     def __init__(self, mu, sigma):
-        super(Gaussian, self).__init__()  #gaussian()里面不是object,就需要super
-        #if 下面用到了nn.Module, e.g. nn.Linear(),就要定义类的时候，里面要加上nn.Module
+        super(Gaussian, self).__init__()  
         self.mu = mu
         self.sigma = sigma
 
@@ -64,7 +63,7 @@ class Gaussian(torch.nn.Module):
                         ) * g0
         return func
     
-    def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
+    def forward(self, x, diff_order=0): 
         g0 = self.gaussZero(x)
         if diff_order == 0:
             return g0

@@ -27,7 +27,6 @@ for i in range(n):
     x = symbols("x")
     f[i][0] = integrate((math.e**x)*(x**i),(x,0,1))
  
-#a为系数向量
 a = np.linalg.inv(H).dot(f)
 print(a)
  

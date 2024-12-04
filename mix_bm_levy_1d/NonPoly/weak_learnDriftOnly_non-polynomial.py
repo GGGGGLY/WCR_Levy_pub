@@ -74,7 +74,7 @@ class Gaussian(torch.nn.Module):
             *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2)*sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
         return func  ##1/(2*pi)
     
-    def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
+    def forward(self, x, diff_order=0): 
         g0 = self.gaussZero(x)
         if diff_order == 0:
             return g0
@@ -163,7 +163,6 @@ class Model(object):
             basis_count2 = 0
             X = self._get_data_t(it)
             Xi = torch.zeros(X.size(0),self.basis2_number)
-            #q = 0 # q为任意给定的常数，XI的基由x^{2q}次给出(x_1^{2q}, ..., x_d^{2q}, x_1^{q}x_2^{q}, ..., x_1^{q}x_d^{q}, ..., x_{d-1}^{q}x_d^{q})
             Xi[:,0] = 1
             basis_count2 += 1
                 

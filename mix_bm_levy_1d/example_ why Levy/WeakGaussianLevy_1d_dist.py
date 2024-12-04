@@ -27,8 +27,7 @@ from scipy import stats
 #save.tensor
 class Gaussian(torch.nn.Module): 
     def __init__(self, mu, sigma, lap_alpha):
-        super(Gaussian, self).__init__()  #gaussian()里面不是object,就需要super
-        #if 下面用到了nn.Module, e.g. nn.Linear(),就要定义类的时候，里面要加上nn.Module
+        super(Gaussian, self).__init__()  
         self.mu = mu
         self.sigma = sigma
         self.lap_alpha = lap_alpha

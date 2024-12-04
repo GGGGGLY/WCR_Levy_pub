@@ -144,7 +144,7 @@ class DataSet(object):
                 return y
         
         
-        elif self.drift_term.shape == torch.Size([2,6]):  #有交叉项，但是最高次为2次 2-order
+        elif self.drift_term.shape == torch.Size([2,6]):  
             if t0 == t1:
                 return x
             else:
@@ -166,7 +166,8 @@ class DataSet(object):
                 return y
         
         
-        elif self.drift_term.shape == torch.Size([3, 20]) or self.drift_term.shape == torch.Size([2, 10]):   #2d,3d含交叉项 （2d最高次为3次）3-order
+        elif self.drift_term.shape == torch.Size([3, 20]) or self.drift_term.shape == torch.Size([2, 10]):   
+            # 2d, 3d including cross terms (the highest order of 2d is 3) 3-order
             if t0 == t1:
                 return x
             else:
