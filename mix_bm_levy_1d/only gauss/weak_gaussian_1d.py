@@ -1,15 +1,3 @@
-"""
-Function: data-driven reveal SDE by the weak form of FKE: 1. linear regression 2. adversarial update
-@author pi square 
-@email: hpp1681@gmail.com
-created in Oct 11, 2021
-update log:
-    0. Oct 11, 2021: created
-    1. Oct 15, 2021: change time index loop to Tensor form including the time index as the first dimension
-    2. Oct 28, 2021: fix bugs of self.t_number -> self.bash_size
-    3. Dec 9, 2021: modifies the adversarial.py to weak_gaussian_sampling for sampling in the test function
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -27,8 +15,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 class Gaussian(torch.nn.Module): 
     def __init__(self, mu, sigma):
-        super(Gaussian, self).__init__()  #gaussian()里面不是object,就需要super
-        #if 下面用到了nn.Module, e.g. nn.Linear(),就要定义类的时候，里面要加上nn.Module
+        super(Gaussian, self).__init__()  
         self.mu = mu
         self.sigma = sigma
 
@@ -63,7 +50,7 @@ class Gaussian(torch.nn.Module):
                         ) * g0
         return func
     
-    def forward(self, x, diff_order=0): #diff_order=0不写，默认为0   #forward是内置函数
+    def forward(self, x, diff_order=0): 
         g0 = self.gaussZero(x)
         if diff_order == 0:
             return g0
@@ -106,7 +93,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  
         return X
     
     @utils.timing # decorator
@@ -116,12 +103,9 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
-        basis = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
+        basis = [] 
         
-        #basis_order = 1 用1阶多项式展开
-        #self.basis_number 展开有多少项 一维时，basis number = basis order;  二维时，basis order = 2, basis number = 6(1, x,y,x^2, y^2, xy)
-
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count = 0
@@ -464,12 +448,4 @@ if __name__ == '__main__':
                   gauss_samp_way='lhs', lhs_ratio=1)
     model.train(gauss_samp_number=100, lam=0.0, STRidge_threshold=0.1)
     
-    
-    #三个维度，时间，轨道数，维度
-    
-    # t = torch.linspace(0,1,10)
-    #Drift term:  [0.] + [1.0014249]x^1 + [0.]x^2 + [-0.9725606]x^3
-    #Diffusion term:  tensor([0.9977])
-    #Maximum relative error:  0.027439415
-    #'train' took 0.194566 s
-    
+

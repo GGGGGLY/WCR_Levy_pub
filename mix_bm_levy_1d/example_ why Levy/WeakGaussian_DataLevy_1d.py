@@ -122,7 +122,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  
         return X
     
     @utils.timing # decorator
@@ -132,11 +132,11 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
         self.basis2_number = self.dimension
     
         # Construct Theta
-        basis1 = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+        basis1 = [] 
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count1 = 0

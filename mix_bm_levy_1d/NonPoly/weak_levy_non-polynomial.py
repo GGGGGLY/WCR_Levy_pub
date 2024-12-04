@@ -122,7 +122,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  
         return X
     
     @utils.timing # decorator
@@ -141,7 +141,7 @@ class Model(object):
         
 
         # Construct Theta
-        basis1 = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+        basis1 = [] 
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count1 = 0
@@ -190,7 +190,6 @@ class Model(object):
             basis1.append(Theta)
             basis_theta = torch.stack(basis1)
             # print("X", X)
-        #print("basis_theta", basis_theta.shape)
             
             
             # Construct Xi
@@ -199,11 +198,12 @@ class Model(object):
             basis_count2 = 0
             X = self._get_data_t(it)
             Xi = torch.zeros(X.size(0),self.basis2_number)
-            #q = 0 # q为任意给定的常数，XI的基由x^{2q}次给出(x_1^{2q}, ..., x_d^{2q}, x_1^{q}x_2^{q}, ..., x_1^{q}x_d^{q}, ..., x_{d-1}^{q}x_d^{q})
+            # q = 0 
+            # q is an arbitrarily given constant, and the basis of XI is given by x^{2q} times (x_1^{2q}, ..., x_d^{2q}, x_1^{q}x_2^{q}, ..., x_1^{q}x_d^{q}, ..., x_{d-1}^{q}x_d^{q})
             Xi[:,0] = 1
             basis_count2 += 1
 
-            if self.basis_xi_order == 1 & self.dimension > 1:  #一个次幂的基底展开，只能是2q次方
+            if self.basis_xi_order == 1 & self.dimension > 1: 
                 for ii in range(0,self.dimension):
                     for jj in range(ii,self.dimension):
                         Xi[:,basis_count2] = torch.mul(X[:,ii]** self.xi_q, X[:,jj]** self.xi_q)
@@ -229,11 +229,9 @@ class Model(object):
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
-        #unsqueeze()用于增加一个维度
 
     def computeTrueLoss(self):
         return (torch.matmul(self.A, self.zeta_true)-self.b.unsqueeze(-1)).norm(2)     
-        #torch.matmul(b, a) 矩阵b与a相乘
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
@@ -392,7 +390,7 @@ class Model(object):
             mu = mu_list[i]
             sigma = sigma_list[i]
             #gauss = self.net(mu, sigma)
-            gauss = self.net(mu, sigma,3/2) #########alpha在哪赋值？？？
+            gauss = self.net(mu, sigma,3/2)
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)
@@ -556,38 +554,3 @@ if __name__ == '__main__':
                   gauss_samp_way='lhs', lhs_ratio=1.0)
     model.train(gauss_samp_number=100, lam=0.0, STRidge_threshold=0.0)
     
-        
-        
- ##### (1) t = torch.tensor([0.1, 0.2, 0.4, 0.7, 0.8, 1])   
- ###basis_order=3
-  
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 1.0, lhs = 1.0
-# Drift term:  [0.01199826] + [-0.29185584]x^1 + [0.0013677]x^2 + [0.02707026]x^3
-#Diffusion term of Brown Motion:  tensor([0.7308])
-#Diffusion term of Levy Noise:  tensor([0.8585])
-#L2 error:  3.2218728
-#'train' took 1.459659 s
-    
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.0, gauss_var = 1.0, lhs = 1.0
-#Drift term:  [0.01143097] + [-0.28630146]x^1 + [0.01087817]x^2 + [0.02716332]x^3
-#Diffusion term of Brown Motion:  tensor([0.6599])
-#Diffusion term of Levy Noise:  tensor([0.8920])
-#L2 error:  2.9802887
-#'train' took 3.038650 s
-
-####basis_order=4
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.0, gauss_var = 1.0, lhs = 1.0
-#Drift term:  [0.01732171] + [-0.2893785]x^1 + [0.00025495]x^2 + [0.02836824]x^3 + [0.0020109]x^4
-#Diffusion term of Brown Motion:  tensor([0.6707])
-#Diffusion term of Levy Noise:  tensor([0.8864])
-#L2 error:  2.9819627
-#'train' took 2.790947 s
-
-####basis_order=4
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.85, lhs = 1.0
-# Drift term:  [0.02269508] + [-0.3068847]x^1 + [-0.00202706]x^2 + [0.0252204]x^3 + [0.00313828]x^4
-#Diffusion term of Brown Motion:  tensor([0.2086])
-#Diffusion term of Levy Noise:  tensor([1.0344])
-#L2 error:  2.9444702
-#'train' took 4.208449 s
-

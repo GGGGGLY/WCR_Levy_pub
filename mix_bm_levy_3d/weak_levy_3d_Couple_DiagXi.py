@@ -237,7 +237,7 @@ class Model(object):
         for kd in range(self.dimension):
             for jb in range(self.basis1_number):
                 if self.drift_independence:
-                    H = torch.mean(gauss1[:, :, kd] * self.data[:, :, kd] ** jb, dim=1)  ##这里有问题
+                    H = torch.mean(gauss1[:, :, kd] * self.data[:, :, kd] ** jb, dim=1)  
                 else:                    
                     H = torch.mean(gauss1[:, :, kd] * self.basis_theta[:, :, jb], dim=1)
                 A[:, kd*self.basis1_number+jb] = H
@@ -247,7 +247,6 @@ class Model(object):
             if self.Xi_type == "cI":
                 for ld in range(self.dimension):
                     E = -torch.mean(gauss_lap, dim=1) 
-                    #print("E",E)  # (1) 10^{-3}阶
                     
                     A[:, H_number+ld] = E
             elif self.Xi_type == "Diag":
@@ -367,7 +366,7 @@ class Model(object):
         # Get the standard ridge esitmate
         if lam != 0: w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
         else: #w = np.linalg.lstsq(X,y)[0]
-            X_inv = np.linalg.pinv(X)  #用了伪逆
+            X_inv = np.linalg.pinv(X)  
             w = np.dot(X_inv,y)
         num_relevant = d
         biginds = np.where(abs(w) > tol)[0]

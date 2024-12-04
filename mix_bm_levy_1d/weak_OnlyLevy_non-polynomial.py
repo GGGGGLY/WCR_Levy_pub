@@ -392,7 +392,7 @@ class Model(object):
             mu = mu_list[i]
             sigma = sigma_list[i]
             #gauss = self.net(mu, sigma)
-            gauss = self.net(mu, sigma,3/2) #########alpha在哪赋值？？？
+            gauss = self.net(mu, sigma,3/2) 
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)

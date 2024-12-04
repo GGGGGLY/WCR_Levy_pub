@@ -242,7 +242,7 @@ class Model(object):
             #for jb in range(4):#range(self.basis1_number):
             for jb in range(self.basis1_number):
                 if self.drift_independence:
-                    H = torch.mean(gauss1[:, :, kd] * self.data[:, :, kd] ** jb, dim=1)  ##这里有问题
+                    H = torch.mean(gauss1[:, :, kd] * self.data[:, :, kd] ** jb, dim=1) 
                 else:                    
                     H = torch.mean(gauss1[:, :, kd] * self.basis_theta[:, :, jb], dim=1)
                 A[:, kd*self.basis1_number+jb] = H
@@ -252,14 +252,11 @@ class Model(object):
             if self.Xi_type == "cI":
                 for ld in range(self.dimension):
                     E = -torch.mean(gauss_lap, dim=1) 
-                    #print("E",E)  # (1) 10^{-3}阶
                     
                     A[:, H_number+ld] = E
             elif self.Xi_type == "Diag":
                 for kd in range(self.dimension):
                     E = -torch.mean(gauss_LapDiag[:, :, kd], dim=1)
-                    #E = torch.nan_to_num(E) 
-                    #transfer "nan" to 0.0, transfer "inf" to 3.4028e+38
                     A[:, H_number+kd] = E
                     #print("E",E)              
         else:                                     

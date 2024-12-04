@@ -94,7 +94,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  
         return X
     
     @utils.timing # decorator
@@ -104,12 +104,9 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
-        basis = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order)))
+        basis = [] 
         
-        #basis_order = 1 用1阶多项式展开
-        #self.basis_number 展开有多少项 一维时，basis number = basis order;  二维时，basis order = 2, basis number = 6(1, x,y,x^2, y^2, xy)
-
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count = 0
