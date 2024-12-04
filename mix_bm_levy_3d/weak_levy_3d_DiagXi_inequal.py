@@ -69,12 +69,11 @@ class Gaussian(torch.nn.Module):
     def LapGauss_VaryDim(self,x, g0):
         func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
         for k in range(x.shape[2]):
-            # 对第k个变量求分数阶导数
+            # the fractional derivative of the kth variable
             func_k = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
                     1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
                         sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
         
-        #其余变量没有求导，但是密度函数仍然包含
             func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
                 0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
            
@@ -263,7 +262,7 @@ class Model(object):
         # compute A by F_lkj
         if self.diffusion_independence:
             for ld in range(self.dimension):
-                F = torch.mean(gauss2[:, :, ld, ld], dim=1)  #涉及维度
+                F = torch.mean(gauss2[:, :, ld, ld], dim=1)  
                 #print("F",F)
                 A[:, H_number+ld] = F
         else:
@@ -276,7 +275,7 @@ class Model(object):
             if self.Xi_type == "cI":
                 for ld in range(self.dimension):
                     E = -torch.mean(gauss_lap, dim=1) 
-                    print("E",E)  # (1) 10^{-3}阶
+                    # print("E",E)  
                     
                     A[:, H_number+F_number+ld] = E
             elif self.Xi_type == "Diag":
@@ -358,8 +357,6 @@ class Model(object):
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)
-        #print("A_list", A_list)
-        #print("b_list", b_list)  #A, b都是10^{-3}阶啊
        
         self.A = torch.cat(A_list, dim=0) 
         #self.A = torch.where(torch.isnan(self.A), torch.full_like(self.A, 0), self.A)

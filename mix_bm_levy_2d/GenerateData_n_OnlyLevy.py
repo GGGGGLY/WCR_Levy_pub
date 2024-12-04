@@ -68,13 +68,12 @@ class DataSet(object):
             else:
                 print("The input dimension is incorrect when drift_independence!")
                 
-            # 这里的if以及两个elif对应的高维下drift项的三种情形：
-            
-            #1、drift的每个维度只包含自己维度的变量，代码里用drift_independence这个变量设为True来表示这个情形。这种情况下，你输入的比如drift=[1,2,3; 4,5,6]表示真实的drift项是[1+2x+3x^2; 4+5y+6y^2]；
-            #2、drift的每个维度还包含其他维度的变量，但还是线性关系，代码里用drift_term的shape是否为[dim, dim+1]来判断是否是这个情形。这种情况下，你输入的比如drift=[1,2,3; 4,5,6]表示真实的drift项是[1+2x+3y; 4+5x+6y]；
-            #3、drift的每个维度还包含其他维度的变量，且不是线性关系，这个情况drift的输入就很复杂了，我们只考虑了三维帽子和二维帽子两种情况，二维帽子drift=[10x-4x^3-4xy^2; 10y-4x^2y-4y^3]，
-               #实际输入是drift=[0,10,0,0,0,0,-4,0,-4,0; 0,0,10,0,0,0,0,-4,0,-4]，它的size是[2,10]，三维帽子同理
-                
+            # The if and two elifs here correspond to three situations of drift terms in high dimensions:
+
+            #1. Each dimension of drift only contains variables of its own dimension. The code uses the variable drift_independence set to True to indicate this situation. In this case, your input, for example, drift=[1,2,3; 4,5,6] indicates that the actual drift term is [1+2x+3x^2; 4+5y+6y^2];
+            #2. Each dimension of drift also contains variables of other dimensions, but it is still a linear relationship. The code uses whether the shape of drift_term is [dim, dim+1] to determine whether this is the case. In this case, if you input drift=[1,2,3; 4,5,6], the actual drift term is [1+2x+3y; 4+5x+6y];
+            #3. Each dimension of drift also contains variables of other dimensions, and they are not linear relationships. In this case, the input of drift is very complicated. We only consider two cases: three-dimensional hat and two-dimensional hat. The two-dimensional hat drift=[10x-4x^3-4xy^2; 10y-4x^2y-4y^3],
+            #The actual input is drift=[0,10,0,0,0,0,-4,0,-4,0; 0,0,10,0,0,0,0,-4,0,-4], and its size is [2,10]. The same is true for the three-dimensional hat
             data[i + 1, :, :] = data[i + 1, :, :] + torch.pow(self.t_diff[i], 1/self.alpha_levy) * self.levy_variable() * \
                     torch.mm(torch.ones(self.samples_num, self.dim), torch.diag(self.xi_term))
                 #+ self.xi_term.repeat(self.samples_num, 1) * torch.pow(self.t_diff[i], 1/self.alpha_levy) * torch.randn(self.samples_num, self.dim)

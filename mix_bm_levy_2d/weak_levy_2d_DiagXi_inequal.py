@@ -73,7 +73,6 @@ class Gaussian(torch.nn.Module):
     def LapGauss_VaryDim(self,x, g0):
         func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
         for k in range(x.shape[2]):
-            # 对第k个变量求分数阶导数
             func_k = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
                     1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
                         sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
@@ -272,7 +271,7 @@ class Model(object):
             if self.Xi_type == "cI":
                 for ld in range(self.dimension):
                     E = -torch.mean(gauss_lap, dim=1) 
-                    print("E",E)  # (1) 10^{-3}阶
+                    print("E",E)  
                     
                     A[:, H_number+F_number+ld] = E
             elif self.Xi_type == "Diag":

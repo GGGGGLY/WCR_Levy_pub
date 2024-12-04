@@ -221,11 +221,9 @@ class Model(object):
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
-        #unsqueeze()用于增加一个维度
 
     def computeTrueLoss(self):
         return (torch.matmul(self.A, self.zeta_true)-self.b.unsqueeze(-1)).norm(2)     
-        #torch.matmul(b, a) 矩阵b与a相乘
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
@@ -417,7 +415,7 @@ class Model(object):
         # Get the standard ridge esitmate
         if lam != 0: w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
         else:
-            #w = np.linalg.lstsq(X,y)[0] #########################
+            #w = np.linalg.lstsq(X,y)[0] 
             X_inv = np.linalg.pinv(X)
             w = np.dot(X_inv,y)
         num_relevant = d

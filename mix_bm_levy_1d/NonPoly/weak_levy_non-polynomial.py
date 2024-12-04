@@ -132,7 +132,7 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order)))
         
         if self.dimension ==1:
             self.basis2_number = 1

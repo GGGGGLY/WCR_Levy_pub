@@ -225,16 +225,13 @@ class Model(object):
             if self.Xi_type == "cI":
                 for ld in range(self.dimension):
                     E = -torch.mean(gauss_lap, dim=1) 
-                    #print("E",E)  # (1) 10^{-3}阶
                     
                     A[:, H_number+ld] = E
             elif self.Xi_type == "Diag":
                 for kd in range(self.dimension):
                     E = -torch.mean(gauss_LapDiag[:, :, kd], dim=1)
                     E = torch.nan_to_num(E) 
-                    #transfer "nan" to 0.0, transfer "inf" to 3.4028e+38
-                    A[:, H_number+kd] = E
-                    #print("E",E)      ##怎么几乎都是nan                   
+                    A[:, H_number+kd] = E               
         else:                                     
             E = np.sum([-torch.mean(gauss_lap, dim=1) for i in range(self.dimension)])
             A[:, H_number] = E

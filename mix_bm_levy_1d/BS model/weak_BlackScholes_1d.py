@@ -136,17 +136,12 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)\
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order)))
         
-        # sigma的基是1,x, 那么G(=(1/2)*sigma^2)的基为 1, x, x^2    
-        # BasisSigma_order=1 (basis: {1, x}); BasisSigma_order*2=2  (basis: {1, x, x^2, x^4})  
-       
+        
         self.basis2_number = int(np.math.factorial(self.dimension+self.BasisSigma_order)\
                 /(np.math.factorial(self.dimension)*np.math.factorial(self.BasisSigma_order)))
         
-        #basis_order = 1 用1阶多项式展开
-        #self.basis_number 展开有多少项 一维时，basis number = basis order;  二维时，basis order = 2, basis number = 6(1, x,y,x^2, y^2, xy)
-
 
         # Construct Theta
         basis1 = [] 
@@ -240,11 +235,9 @@ class Model(object):
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
-        #unsqueeze()用于增加一个维度
 
     def computeTrueLoss(self):
         return (torch.matmul(self.A, self.zeta_true)-self.b.unsqueeze(-1)).norm(2)     
-        #torch.matmul(b, a) 矩阵b与a相乘
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db

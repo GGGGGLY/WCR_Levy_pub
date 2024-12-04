@@ -142,7 +142,7 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
         
         self.basis2_number = int( self.dimension ) 
         
@@ -319,7 +319,6 @@ class Model(object):
         if self.gauss_samp_way == 'lhs':
             #factor = 1/2
             mu_list = self.lhs_ratio * torch.rand(samp_number)*(1.5-(-1.5)) -1.5
-            # 1/2比3/8和2/3要好？
             #mu_list = self.lhs_ratio * torch.rand(samp_number)*(self.data.max()-self.data.min())*factor + self.data.min()*factor
             
         if self.gauss_samp_way == 'SDE':

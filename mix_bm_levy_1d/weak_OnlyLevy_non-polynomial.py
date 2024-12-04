@@ -122,7 +122,7 @@ class Model(object):
 
 
     def _get_data_t(self, it):
-        X = self.data[it,:,:]  #三个维度，时间，轨道数，问题的维度
+        X = self.data[it,:,:]  
         return X
     
     @utils.timing # decorator
@@ -132,7 +132,7 @@ class Model(object):
         """
         self.t_number = len(self.t)
         self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
-                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) #int取整， np.math.factorial阶乘
+                /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
         
         if self.dimension ==1:
             self.basis2_number = 1
@@ -141,7 +141,7 @@ class Model(object):
         
 
         # Construct Theta
-        basis1 = [] #用1带进去基， 得到一向量，用2带进去，又得到一个向量
+        basis1 = [] 
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count1 = 0
@@ -240,11 +240,9 @@ class Model(object):
     
     def computeLoss(self):
         return (torch.matmul(self.A, torch.tensor(self.zeta).to(torch.float).unsqueeze(-1))-self.b.unsqueeze(-1)).norm(2) 
-        #unsqueeze()用于增加一个维度
 
     def computeTrueLoss(self):
         return (torch.matmul(self.A, self.zeta_true)-self.b.unsqueeze(-1)).norm(2)     
-        #torch.matmul(b, a) 矩阵b与a相乘
 
     def computeAb(self, gauss):
         H_number = self.dimension * self.basis1_number  #db
@@ -548,304 +546,3 @@ if __name__ == '__main__':
                   gauss_samp_way='lhs', lhs_ratio=1.0)
     model.train(sample_num = samples, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0)
     
-    
-  ###############################
- ### 计算误差的数据x是随机产生的torch.randn((10,3)) 正态
- ################################        
-    
-    #####  t = torch.tensor([0.1, 0.2, 0.4, 0.7, 0.8, 1])  
-    
-################ basis_order=2
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-   #Drift term:  [-0.04234535] + [-0.514166]x^1 + [-0.09216347]x^2
-   #Diffusion term of Levy Noise:  tensor([0.7481])
-   #L2 error:  0.015869588
-   #'train' took 2.824617 s
-   
-    
-################ basis_order=3
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-   #Drift term:  [-0.06770282] + [-0.7849851]x^1 + [-0.16422017]x^2 + [0.12534173]x^3
-   #Diffusion term of Levy Noise:  tensor([0.8087])
-   #L2 error:  0.01467079
-   #'train' took 2.663183 s
-   
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.52, lhs = 1.0
-  # Drift term:  [-0.07771354] + [-0.77549636]x^1 + [-0.18400773]x^2 + [0.12678364]x^3
-  #Diffusion term of Levy Noise:  tensor([0.8009])
-  #L2 error:  0.015539539
-  #'train' took 3.176082 s
-  
-  
-################ basis_order=4
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-   # Drift term:  [-0.05945932] + [-0.7836889]x^1 + [-0.23470138]x^2 + [0.1334491]x^3 + [0.01405139]x^4
-   #Diffusion term of Levy Noise:  tensor([0.8115])
-   #L2 error:  0.014756083
-   #'train' took 2.754304 s
-    
-    
-################ basis_order=5
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-   # Drift term:  [-0.06062147] + [-1.0296358]x^1 + [-0.29857883]x^2 + [0.2794859]x^3 + [0.02178926]x^4 + [-0.0217872]x^5
-   # Diffusion term of Levy Noise:  tensor([0.8603])
-   #L2 error:  0.015352209
-   # 'train' took 3.016591 s
-
-
-################ basis_order=6
- ###sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-   # Drift term:  [-0.06285699] + [-1.0003705]x^1 + [-0.35796738]x^2 + [0.2696021]x^3 + [0.03348419]x^4 + [-0.02027802]x^5 + [-0.00129061]x^6
-   #Diffusion term of Levy Noise:  tensor([0.8547])
-   #L2 error:  0.016793806
-   #'train' took 3.015200 s
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    ##############################3
-    
-    # 之前L2_error =(1/ x.numel() )\sum...分母错了，应该是检验的x的元素个数，之前除成了sample的个数(data的个数)
-    
-    ##############################3
-    
-    
-    
- ###############################
-### 计算误差的数据x是随机产生的torch.rand((10,3)) 均匀
-################################       
-        
- #####  t = torch.tensor([0.1, 0.2, 0.4, 0.7, 0.8, 1])   
- ###basis_order=3
-  
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 1.0, lhs = 1.0
-# Drift term:  [-0.02230229] + [-0.58228815]x^1 + [-0.00057352]x^2 + [0.05696728]x^3
-#Diffusion term of Levy Noise:  tensor([0.8042])
-#L2 error:  1.9099435e-04
-#'train' took 1.318512 s
-
-##########sample = 10000, gauss_samp_number=100, lam=0.0, STRidge_threshold=0.0, gauss_var = 1.0, lhs = 1.0
-# Drift term:  [-0.01896776] + [-0.5321587]x^1 + [0.00173822]x^2 + [0.05385792]x^3
-#Diffusion term of Levy Noise:  tensor([0.7928])
-#L2 error:  2.1838958e-04
-#'train' took 2.544805 s
-
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.85, lhs = 1.0
-# Drift term:  [-0.02504484] + [-0.69420147]x^1 + [-0.02810544]x^2 + [0.08245508]x^3
-#Diffusion term of Levy Noise:  tensor([0.8227])
-#L2 error:  1.5879127e-04
-#'train' took 1.273218 s
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.75, lhs = 1.0
-# Drift term:  [-0.03133397] + [-0.75396645]x^1 + [-0.05961446]x^2 + [0.09988371]x^3
-#Diffusion term of Levy Noise:  tensor([0.8283])
-#L2 error:  1.3782315e-04
-#'train' took 1.901745 s
-
-
-#--------------------------------
-
-##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
-# Drift term:  [-0.06770282] + [-0.7849851]x^1 + [-0.16422017]x^2 + [0.12534173]x^3
-# Diffusion term of Levy Noise:  tensor([0.8087])
-#L2 error:  1.0302984e-04
-# 'train' took 2.209337 s
-
-#-----------------------------------
-
-##########sample =10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.45, lhs = 1.0
-# 不收敛
-
-##########sample =10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 0.85
-# Drift term:  [0.02529648] + [-0.2284942]x^1 + [0.02420173]x^2 + [0.01936538]x^3 + [0.58043826]x^4
-#Diffusion term of Levy Noise:  tensor([0.6958])
-#L2 error:  3.08012e-04
-#'train' took 2.672321 s
-
-##########sample =20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 0.85
-# Drift term:  [-0.05321235] + [-0.6409784]x^1 + [-0.031448]x^2 + [0.08274561]x^3 + [0.6468183]x^4
-#Diffusion term of Levy Noise:  tensor([0.7479])
-#L2 error:  1.7149837e-04
-#'train' took 4.162059 s
-
-  
- ###### basis_order = 4
- 
- ##########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.05945932] + [-0.7836889]x^1 + [-0.23470138]x^2 + [0.1334491]x^3 + [0.01405139]x^4
- # Diffusion term of Levy Noise:  tensor([0.8115])
- #L2 error:  1.0013332e-04
- #'train' took 2.014093 s
- 
- ########sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.5, lhs = 1.0
- # 不收敛
- 
- 
- #######basis_order = 2
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- #Drift term:  [-0.04234535] + [-0.514166]x^1 + [-0.09216347]x^2
- # Diffusion term of Levy Noise:  tensor([0.7481])
- #L2 error:  1.7761477e-04
- #'train' took 1.876019 s
- 
- 
- #######basis_order = 5
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.06062147] + [-1.0296358]x^1 + [-0.29857883]x^2 + [0.2794859]x^3 + [0.02178926]x^4 + [-0.0217872]x^5
- # Diffusion term of Levy Noise:  tensor([0.8603])
- #L2 error:  6.9840205e-05
- #'train' took 2.021271 s
- 
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.5, lhs = 1.0
- # 不收敛
- 
- #---------------------------
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.52, lhs = 1.0
- # Drift term:  [-0.06930447] + [-1.0136533]x^1 + [-0.322403]x^2 + [0.28052768]x^3 + [0.02433956]x^4 + [-0.02172366]x^5
- #Diffusion term of Levy Noise:  tensor([0.8527])
- #L2 error: 6.9655627e-05
- #'train' took 2.488726 s
- #----------------------------
- 
- 
- ############ basis_order = 6
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.52, lhs = 1.0
- # Drift term:  [-0.07210229] + [-0.9840788]x^1 + [-0.38280383]x^2 + [0.27087006]x^3 + [0.03630953]x^4 + [-0.02013306]x^5 + [-0.00133744]x^6
- #Diffusion term of Levy Noise:  tensor([0.8471])
- #L2 error:  7.237276e-05
- #'train' took 2.180866 s
- 
- #----------------------------
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.06285699] + [-1.0003705]x^1 + [-0.35796738]x^2 + [0.2696021]x^3 + [0.03348419]x^4 + [-0.02027802]x^5 + [-0.00129061]x^6
- #Diffusion term of Levy Noise:  tensor([0.8547])
- #L2 error:  7.23355e-05
- #'train' took 1.999630 s
- #--------------------------------
- 
- 
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.04431906] + [-1.0838614]x^1 + [0.03180895]x^2 + [0.24861413]x^3 + [-0.00691995]x^4 + [-0.01780893]x^5 + [0.00079371]x^6
- #Diffusion term of Levy Noise:  tensor([0.8484])
- #L2 error:  4.685231e-05
- #'train' took 3.843506 s
- 
- 
- 
- 
- 
- 
- 
- ####################################
- ## 计算误差的x = self.data, 不影响未知项的估计，只是影响误差值
- ############################
- ##### t = torch.tensor([0.1, 0.2, 0.4, 0.7, 0.8, 1])   
- ### basis_order=3
- 
- 
- ############ basis_order = 6
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.04431906] + [-1.0838614]x^1 + [0.03180895]x^2 + [0.24861413]x^3 + [-0.00691995]x^4 + [-0.01780893]x^5 + [0.00079371]x^6
- #Diffusion term of Levy Noise:  tensor([0.8484])
- #L2 error:  0.043288928
- #'train' took 3.727845 s
- 
- 
- 
- ############ basis_order = 5
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.04402484] + [-1.0728511]x^1 + [-0.01885872]x^2 + [0.24888024]x^3 + [0.00503431]x^4 + [-0.01736384]x^5
- #Diffusion term of Levy Noise:  tensor([0.8455])
- #L2 error:  0.039050326
- #'train' took 4.197603 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- #Drift term:  [-0.06062147] + [-1.0296358]x^1 + [-0.29857883]x^2 + [0.2794859]x^3 + [0.02178926]x^4 + [-0.0217872]x^5
- #Diffusion term of Levy Noise:  tensor([0.8603])
- #L2 error:  0.0917404
- #'train' took 2.736982 s
- 
- 
- 
- 
- ############### basis_order = 4
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.04912507] + [-0.64845544]x^1 + [-0.04141122]x^2 + [0.08696736]x^3 + [0.00522086]x^4
- #Diffusion term of Levy Noise:  tensor([0.7496])
- #L2 error:  0.0102087855
- #'train' took 4.648601 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- #Drift term:  [-0.05945932] + [-0.7836889]x^1 + [-0.23470138]x^2 + [0.1334491]x^3 + [0.01405139]x^4
- #Diffusion term of Levy Noise:  tensor([0.8115])
- #L2 error:  0.02709006
- #'train' took 2.828524 s
- 
- 
- 
- 
- ################ basis_order = 3
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.52, lhs = 1.0
- # Drift term:  [-0.06160183] + [-0.6809114]x^1 + [-0.02786956]x^2 + [0.08567537]x^3
- #Diffusion term of Levy Noise:  tensor([0.7530])
- #L2 error:  0.009629369
- #'train' took 4.353461 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.06770282] + [-0.7849851]x^1 + [-0.16422017]x^2 + [0.12534173]x^3
- #Diffusion term of Levy Noise:  tensor([0.8087])
- #L2 error:  0.020542737
- #'train' took 3.499747 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.52, lhs = 1.0
- # Drift term:  [-0.07771354] + [-0.77549636]x^1 + [-0.18400773]x^2 + [0.12678364]x^3
- #Diffusion term of Levy Noise:  tensor([0.8009])
- #L2 error:  0.021266308
- #'train' took 2.979031 s
- 
- 
- 
- 
- ################### basis_order = 2
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.05683747] + [-0.49413723]x^1 + [-0.02207983]x^2
- #Diffusion term of Levy Noise:  tensor([0.7136])
- #L2 error:  0.008754043
- #'train' took 4.478622 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.04234535] + [-0.514166]x^1 + [-0.09216347]x^2
- # Diffusion term of Levy Noise:  tensor([0.7481])
- #L2 error:  0.013608242
- #'train' took 2.768482 s
- 
- 
- 
- ################ basis_order = 1
- #sample = 20000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.05412639] + [-0.4988049]x^1
- #Diffusion term of Levy Noise:  tensor([0.7150])
- #L2 error:  0.008681393
- #'train' took 4.619529 s
- 
- #sample = 10000, gauss_samp_number=50, lam=0.0, STRidge_threshold=0.0, gauss_var = 0.55, lhs = 1.0
- # Drift term:  [-0.03307164] + [-0.5838918]x^1
- #Diffusion term of Levy Noise:  tensor([0.7662])
- #L2 error:  0.012834115
- #'train' took 3.138693 s
- 
- ###用原来的数据逼近发现一阶多项式的误差最小，阶数越高，误差越大，但是原函数-2x*e^{-x^2}是一个在[-2, 2]呈现双峰（左峰上凸，右峰下凸）
- ##原来的数据范围大概在[-6.1, 7.7], 所以在[-6.1, -2]\cup [2, 7.7]中会没法逼近，原函数是趋于0的，而现实是有数据的；
- ##所以考虑在[-2,2]随机生成数据检验拟合（逼近）情况。
- 

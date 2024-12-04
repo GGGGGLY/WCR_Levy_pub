@@ -39,7 +39,7 @@ class DataSet(object):
         self.shape_t = self.time_instants.shape[0]
         #self.t_diff = torch.from_numpy(np.diff(self.time_instants.numpy()))
 
-    def drift(self, x): #每个维度drift相同
+    def drift(self, x): 
         y = 0
         for i in range(self.drift_term.shape[1]):
             y = y + self.drift_term[:, i] * x ** i
@@ -222,8 +222,6 @@ if __name__ == '__main__':
     #drift = torch.tensor([[-7/4, -5/2, -5, 0, -2, -1, 0, -4,0, 0], [-7/4, -5/2, -5, 0, -2, -1, 0, -4,0, 0]])
     #or
     #drift = torch.tensor([[-7/4, -5/2, -5, 0, -2, -1, 0, 0, -4, 0], [-7/4, -5/2, -5, 0, -2, -1, 0, 0, -4, 0]])
-    #drift = torch.tensor([[-1.75, -2.5, -5, 0, -2, -1, 0, 0, -4, 0], [-1.75, -5, -2.5, -1, -2, 0, 0, -4, 0, 0]]) #没有数据？nan?
-    #drift = torch.tensor([[-1.75, -2.5, -5, 0, -2, -1, 0, -4, 0, 0], [-1.75, -5, -2.5, -1, -2, 0, 0, 0, -4, 0]]) #没有数据？nan?
     drift = torch.tensor([[0, 10, 0, 0, 0, 0, -4, 0, -4, 0], [0, 10, 0, 0, 0, 0, -4, 0, -4, 0]])
     #drift = torch.tensor([[0, 5, 0, 0, 0,-1], [0, 0,5, 1, 0, 0]])
     #drift = torch.tensor([[0, 5, 0, 0, -1,0], [0, 0, 5, 0, -1, 0]])
