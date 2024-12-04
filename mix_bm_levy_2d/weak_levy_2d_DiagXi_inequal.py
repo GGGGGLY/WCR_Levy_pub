@@ -83,8 +83,6 @@ class Gaussian(torch.nn.Module):
             #         1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
             #             hyp1f1( (1 + self.lap_alpha, 2), (1,2), -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
               
-        
-        #其余变量没有求导，但是密度函数仍然包含
             func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
                 0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
            
@@ -103,7 +101,7 @@ class Gaussian(torch.nn.Module):
         elif diff_order == 'frac':
             return self.LapGauss(x)
         elif diff_order == 'frac_diag':
-            return self.LapGauss_VaryDim(x, g0) ##################################
+            return self.LapGauss_VaryDim(x, g0) 
         else:
             raise RuntimeError("higher order derivatives of the gaussian has not bee implemented!")
 
@@ -261,7 +259,7 @@ class Model(object):
         # compute A by F_lkj
         if self.diffusion_independence:
             for ld in range(self.dimension):
-                F = torch.mean(gauss2[:, :, ld, ld], dim=1)  #涉及维度
+                F = torch.mean(gauss2[:, :, ld, ld], dim=1)  
                 #print("F",F)
                 A[:, H_number+ld] = F
         else:
@@ -355,8 +353,6 @@ class Model(object):
             A, b = self.computeAb(gauss)
             A_list.append(A)
             b_list.append(b)
-        #print("A_list", A_list)
-        #print("b_list", b_list)  #A, b都是10^{-3}阶
        
         self.A = torch.cat(A_list, dim=0) 
         #self.A = torch.where(torch.isnan(self.A), torch.full_like(self.A, 0), self.A)
@@ -529,8 +525,8 @@ if __name__ == '__main__':
     t = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]).astype(np.float32) 
     t = torch.tensor(t)
     dim = 2
-    #Xi_type = "cI" #对角元相同的对角阵  case1
-    Xi_type = "Diag" # 对角元分别估计 case2
+    #Xi_type = "cI" # case1: Diagonal matrices with the same diagonal elements
+    Xi_type = "Diag" # case2: Estimate the diagonal elements separately.
     
     drift = torch.tensor([0, 1, 0, -1]).repeat(dim, 1)
     diffusion = torch.ones(dim)
