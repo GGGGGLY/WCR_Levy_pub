@@ -67,11 +67,11 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
-        
-        #         (x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
-        x = (x - self.mu)/self.sigma/np.sqrt(2)
-        func = (1/self.sigma/np.sqrt(2))**self.lap_alpha * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
-            *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2)*sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
+        x = (x - self.mu)/ self.sigma/ torch.sqrt(torch.tensor(2))
+        func = (1/self.sigma/torch.sqrt(torch.tensor(2)))**self.lap_alpha \
+            * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
+            *sp.gamma((self.dim+self.lap_alpha)/2)*2**self.lap_alpha/sp.gamma(self.dim/2) \
+            * sp.hyp1f1((self.dim+self.lap_alpha)/2, self.dim/2, -torch.sum(x**2,dim = 2))
         return func  ##1/(2*pi)
     
     def forward(self, x, diff_order=0): 
@@ -115,7 +115,6 @@ class Model(object):
         self.error_tolerance = None
         self.max_iter = None
         self.loss = None
-
         # self.batch_size = None # tbd
         # self.train_state = TrainState() # tbd
         # self.losshistory = LossHistory() # tbd

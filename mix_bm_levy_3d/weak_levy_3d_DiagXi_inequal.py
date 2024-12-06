@@ -61,23 +61,67 @@ class Gaussian(torch.nn.Module):
     
     def LapGauss(self, x):
         
-        func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
-            (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
-        #print("LapGauss.shape", func.shape) #11,10000
-        return func    
+        x_cpu = x.cpu()  # Move tensor x to CPU
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU if it's a tensor
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU if it's a tensor
+        # Now compute the arguments for the hypergeometric function
+        a = (x_cpu.shape[2] + self.lap_alpha) / 2
+        b = x_cpu.shape[2] / 2
+        z = -torch.sum((x_cpu - mu_cpu)**2, dim=2) / (2 * sigma_cpu**2)
+        z_np = z.cpu().numpy()
+        frac_result = sp.hyp1f1(a, b, z_np)
+        frac_result_tensor = torch.tensor(frac_result, device=x.device)
+                
+        # func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+        #         (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* \
+                # sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, - torch.sum((x-self.mu)**2, dim=2) / (2 * self.sigma**2)) 
+        func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+                (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* frac_result_tensor
+        return func   
     
-    def LapGauss_VaryDim(self,x, g0):
+    
+    
+
+    def LapGauss_VaryDim(self, x, g0):
         func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
-        for k in range(x.shape[2]):
-            # the fractional derivative of the kth variable
-            func_k = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
-                    1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
-                        sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
         
-            func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
-                0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
-           
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU
+
+        for k in range(x.shape[2]):
+            x_k_cpu = x[:, :, k].cpu()  # Get x[:, :, k] and move it to CPU
+            mu_k_cpu = mu_cpu[k]  # Get the k-th component of mu
+
+            # Compute the arguments for the hypergeometric function
+            a = (1 + self.lap_alpha) / 2
+            b = 1 / 2
+            z = -(x_k_cpu - mu_k_cpu) ** 2 / (2 * sigma_cpu ** 2)
+            z_np = z.numpy()  # Convert to NumPy array
+            frac_result = sp.hyp1f1(a, b, z_np)  # Compute the hypergeometric function
+            frac_result_tensor = torch.tensor(frac_result, device=self.device)
+
+            func_k = (1 / (np.sqrt(2) * sigma_cpu)) ** self.lap_alpha * sp.gamma((1 + self.lap_alpha) / 2) * 2 ** self.lap_alpha / sp.gamma(1 / 2) * \
+                    1 / (sigma_cpu * torch.sqrt(2 * torch.tensor(np.pi))) * frac_result_tensor
+
+            # Store the result in the func tensor
+            func[:, :, k] = g0 * (sigma_cpu * torch.sqrt(2 * torch.tensor(np.pi))) * torch.exp(0.5 * (x[:, :, k] - mu_k_cpu) ** 2 / sigma_cpu ** 2) * func_k
+
         return func
+    
+    
+    # def LapGauss_VaryDim(self,x, g0):
+    #     func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
+    #     for k in range(x.shape[2]):
+            
+    #         # the fractional derivative of the kth variable
+    #         func_k = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
+    #                 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
+    #                     sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
+        
+    #         func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
+    #             0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
+           
+    #     return func
     
 
     def forward(self, x, diff_order=0):
@@ -337,15 +381,13 @@ class Model(object):
                 mu_list = data[-1, index[0: samp_number], :]
             else:
                 print("The number of samples shall not be less than the number of tracks!")
-        print("mu_list", mu_list)
+        # print("mu_list", mu_list)
         sigma_list = torch.ones(samp_number).to(self.device)*self.variance
-        print("sigma_list", sigma_list.shape)
+        # print("sigma_list", sigma_list.shape)
         return mu_list, sigma_list
 
     def buildLinearSystem(self, samp_number):
         mu_list, sigma_list = self.sampleTestFunc(samp_number)
-        # print("mu_list: ", mu_list.device)
-        # print("sigma_list: ", sigma_list.device)
         A_list = []
         b_list = []
         for i in range(mu_list.shape[0]):
@@ -389,9 +431,10 @@ class Model(object):
         else: X = X0
 
         # Get the standard ridge esitmate
-        if lam != 0: w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
+        if lam != 0: 
+            w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
         else: #w = np.linalg.lstsq(X,y)[0]
-            X_inv = np.linalg.pinv(X)  #用了伪逆
+            X_inv = np.linalg.pinv(X)  
             w = np.dot(X_inv,y)
         num_relevant = d
         biginds = np.where(abs(w) > tol)[0]
@@ -400,8 +443,8 @@ class Model(object):
         for j in range(maxit):
             # Figure out which items to cut out
             smallinds = np.where(abs(w) < tol)[0]
-            print("STRidge_j: ", j)
-            print("smallinds", smallinds)
+            # print("STRidge_j: ", j)
+            # print("smallinds", smallinds)
             new_biginds = [i for i in range(d) if i not in smallinds]
 
             # If nothing changes then stop
@@ -467,8 +510,8 @@ class Model(object):
         self.b = self.b.to("cpu")
         AA = torch.mm(torch.t(self.A), self.A)
         Ab = torch.mm(torch.t(self.A), self.b)
-        print("A.max: ", self.A.max(), "b.max: ", self.b.max())
-        print("ATA.max: ", AA.max(), "ATb.max: ", Ab.max())
+        # print("A.max: ", self.A.max(), "b.max: ", self.b.max())
+        # print("ATA.max: ", AA.max(), "ATb.max: ", Ab.max())
         self.zeta = torch.tensor(self.STRidge(self.A.detach().numpy(), self.b.detach().numpy(), lam, 100, STRidge_threshold)).to(torch.float)
         print("zeta: ", self.zeta.size(), self.zeta)
         

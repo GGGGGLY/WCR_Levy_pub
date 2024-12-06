@@ -61,7 +61,9 @@ class Gaussian(torch.nn.Module):
     
     def LapGauss(self, x):
         
-        func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
+        func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha \
+            / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
+                * sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         return func
     
    
@@ -317,9 +319,8 @@ class Model(object):
                 mu_list = data[-1, index[0: samp_number], :]
             else:
                 print("The number of samples shall not be less than the number of tracks!")
-        print("mu_list", mu_list)
+        # print("mu_list", mu_list)
         sigma_list = torch.ones(samp_number).to(self.device)*self.variance
-        print("sigma_list", sigma_list.shape)
         return mu_list, sigma_list
 
     def buildLinearSystem(self, samp_number):
