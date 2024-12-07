@@ -7,6 +7,9 @@ To install the project, follow these steps:
    ```bash
    git clone https://github.com/yourusername/WCR_Levy_pub.git
 
+2. Add path:
+   ```bash
+   export PYTHONPATH=$PYTHONPATH:/Path/to/Levy_wcr
 
 ## Explaination
 
