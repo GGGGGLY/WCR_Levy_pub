@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-3D couple
+3D couple: checked.
 
 @author: gly
 """
@@ -77,7 +77,6 @@ class Gaussian(torch.nn.Module):
         func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
                 (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* frac_result_tensor
         
-        # func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         return func
     
     def LapGauss_VaryDim(self,x, g0):

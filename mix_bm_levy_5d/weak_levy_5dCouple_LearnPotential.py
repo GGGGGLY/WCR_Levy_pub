@@ -2,6 +2,8 @@
 """
 5D couple: only estimate the parameters of potential a, b
 
+checked.
+
 @author: gly
 """
 
@@ -60,10 +62,24 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
-        Gamma_ = sp.hyp1f1( (x.cpu().shape[2] + self.lap_alpha)/2, x.cpu().shape[2]/2, -torch.sum((x.cpu()-self.mu.cpu())**2, dim=2) / (2*self.sigma.cpu()**2))
-        Gamma_ = Gamma_.to(device)
-        func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*Gamma_
-        #func = (1/(torch.sqrt(torch.tensor(2**2 *self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*Gamma_
+        # Gamma_ = sp.hyp1f1( (x.cpu().shape[2] + self.lap_alpha)/2, x.cpu().shape[2]/2, -torch.sum((x.cpu()-self.mu.cpu())**2, dim=2) / (2*self.sigma.cpu()**2))
+        # Gamma_ = Gamma_.to(device)
+        # func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*Gamma_
+        
+        x_cpu = x.cpu()  # Move tensor x to CPU
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU if it's a tensor
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU if it's a tensor
+        # Now compute the arguments for the hypergeometric function
+        a = (x_cpu.shape[2] + self.lap_alpha) / 2
+        b = x_cpu.shape[2] / 2
+        z = -torch.sum((x_cpu - mu_cpu)**2, dim=2) / (2 * sigma_cpu**2)
+        z_np = z.cpu().numpy()
+        frac_result = sp.hyp1f1(a, b, z_np)
+        frac_result_tensor = torch.tensor(frac_result, device=x.device)
+                
+        func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+                (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* frac_result_tensor
+        
 
         return func
     
@@ -289,15 +305,13 @@ class Model(object):
                 mu_list = data[-1, index[0: samp_number], :]
             else:
                 print("The number of samples shall not be less than the number of tracks!")
-        print("mu_list", mu_list)
+        # print("mu_list", mu_list)
         sigma_list = torch.ones(samp_number).to(self.device)*self.variance
-        print("sigma_list", sigma_list.shape)
+        # print("sigma_list", sigma_list.shape)
         return mu_list, sigma_list
 
     def buildLinearSystem(self, samp_number):
         mu_list, sigma_list = self.sampleTestFunc(samp_number)
-        # print("mu_list: ", mu_list.device)
-        # print("sigma_list: ", sigma_list.device)
         A_list = []
         b_list = []
         for i in range(mu_list.shape[0]):
@@ -470,7 +484,7 @@ if __name__ == '__main__':
      #                 drift_independence=False, explosion_prevention=False)
     #data = dataset.get_data(plot_hist=False)
     
-    data = torch.load("./5D_potential_data_99999.pt")
+    data = torch.load("./mix_bm_levy_5d/5D_potential_data_99999.pt")
     #data = torch.load("./5D_potential_data_50000.pt")
     data = data * (1 + 0.*torch.rand(data.shape))
     print("data: ", data.shape, data.max(), data.min())
