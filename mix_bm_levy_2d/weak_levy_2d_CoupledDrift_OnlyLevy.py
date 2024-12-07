@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
-from gen_data.GenerateData_n_dependence_OnlyLevy import DataSet
+from gen_data.generateData_n_dependence_OnlyLevy import DataSet
 from pyDOE import lhs
 import time
 import utils

@@ -8,8 +8,14 @@ Created on Sun Mar 26 11:30:28 2023
 import torch
 import torch.nn as nn
 import numpy as np
+import sys
+import os
+
+sys.path.append(os.path.abspath('/home/v-liyaguo/Levy_wcr/gen_data'))
+print(sys.path) 
+
 from collections import OrderedDict
-from GenerateData_n_inequal_ import DataSet
+from gen_data.generateData_n_inequal import DataSet
 from pyDOE import lhs
 import time
 import utils
@@ -22,6 +28,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
 
 
 class Gaussian(torch.nn.Module):

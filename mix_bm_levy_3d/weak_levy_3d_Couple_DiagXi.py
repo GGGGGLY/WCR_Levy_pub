@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
-from gen_data.GenerateData_n_CoupleDrift import DataSet
+from gen_data.generateData_n_CoupleDrift import DataSet
 from pyDOE import lhs
 import time
 import utils

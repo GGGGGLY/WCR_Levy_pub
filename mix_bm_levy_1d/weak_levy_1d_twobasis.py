@@ -3,6 +3,8 @@
 Created on Mon Jan 16 12:41:12 2023
 
 @author: gly
+
+checked.
 """
 
 import torch
