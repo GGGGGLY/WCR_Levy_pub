@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
-from GenerateData_n_inequal_ import DataSet
+from gen_data.generateData_n_inequal import DataSet
 from pyDOE import lhs
 import time
 import utils
@@ -62,12 +62,21 @@ class Gaussian(torch.nn.Module):
     
     def LapGauss(self, x):
         
-        #func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
-        #    (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* hyp1f1( (x.shape[2] + self.lap_alpha, 2), (x.shape[2], 2), -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
-        #print("LapGauss.shape", func.shape) #11,10000
-        func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
-            (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
-        
+        # func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+        #     (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
+        x_cpu = x.cpu()  # Move tensor x to CPU
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU if it's a tensor
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU if it's a tensor
+        # Now compute the arguments for the hypergeometric function
+        a = (x_cpu.shape[2] + self.lap_alpha) / 2
+        b = x_cpu.shape[2] / 2
+        z = -torch.sum((x_cpu - mu_cpu)**2, dim=2) / (2 * sigma_cpu**2)
+        z_np = z.cpu().numpy()
+        frac_result = sp.hyp1f1(a, b, z_np)
+        frac_result_tensor = torch.tensor(frac_result, device=x.device)
+                
+        func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+                (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* frac_result_tensor
         return func    
     
     def LapGauss_VaryDim(self,x, g0):

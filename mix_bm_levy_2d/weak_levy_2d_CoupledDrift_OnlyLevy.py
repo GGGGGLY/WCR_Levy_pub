@@ -60,26 +60,61 @@ class Gaussian(torch.nn.Module):
         return func
     
     def LapGauss(self, x):
+        x_cpu = x.cpu()  # Move tensor x to CPU
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU if it's a tensor
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU if it's a tensor
+        # Now compute the arguments for the hypergeometric function
+        a = (x_cpu.shape[2] + self.lap_alpha) / 2
+        b = x_cpu.shape[2] / 2
+        z = -torch.sum((x_cpu - mu_cpu)**2, dim=2) / (2 * sigma_cpu**2)
+        z_np = z.cpu().numpy()
+        frac_result = sp.hyp1f1(a, b, z_np)
+        frac_result_tensor = torch.tensor(frac_result, device=x.device)
+                
+        func = (1/(torch.sqrt(torch.tensor(2))*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(x.shape[2]/2) * \
+                (1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))**x.shape[2])* frac_result_tensor
         
-        func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha \
-            / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
-                * sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
+        # func = (1/(np.sqrt(2)*self.sigma)) ** self.lap_alpha * sp.gamma( (x.shape[2] + self.lap_alpha)/2 )* 2**self.lap_alpha \
+        #     / sp.gamma(x.shape[2]/2) * 1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi))) \
+        #         * sp.hyp1f1((x.shape[2] + self.lap_alpha)/2, x.shape[2]/2, -torch.sum((x-self.mu)**2, dim=2) / (2*self.sigma**2)) 
         return func
     
    
     def LapGauss_VaryDim(self,x, g0):
-        func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
-        for k in range(x.shape[2]):
-            # fractional derivate to k-th variable
-            func_k = (np.sqrt(1/(np.sqrt(2)*self.sigma)) )** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
-                    1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
-                        sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
+        # func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
+        # for k in range(x.shape[2]):
+        #     # fractional derivate to k-th variable
+        #     func_k = (np.sqrt(1/(np.sqrt(2)*self.sigma)) )** self.lap_alpha * sp.gamma( (1 + self.lap_alpha)/2 )* 2**self.lap_alpha / sp.gamma(1/2) * \
+        #             1/(self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))*\
+        #                 sp.hyp1f1((1 + self.lap_alpha)/2, 1/2, -(x[:, :, k]-self.mu[k])**2 / (2*self.sigma**2))  
         
-            #print("func_k", func_k)
+        #     #print("func_k", func_k)
        
-            func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
-                0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
-            #print("func", func)
+        #     func[:,:,k] = g0 * (self.sigma*torch.sqrt(2*torch.tensor(torch.pi)))* torch.exp(\
+        #         0.5 * (x[:, :, k] - self.mu[k]) ** 2 / self.sigma ** 2) *func_k
+        func = torch.zeros([x.shape[0], x.shape[1], x.shape[2]]).to(self.device)
+        
+        mu_cpu = self.mu.cpu()  # Move self.mu to CPU
+        sigma_cpu = self.sigma.cpu()  # Move self.sigma to CPU
+
+        for k in range(x.shape[2]):
+            x_k_cpu = x[:, :, k].cpu()  # Get x[:, :, k] and move it to CPU
+            mu_k_cpu = mu_cpu[k]  # Get the k-th component of mu
+
+            # Compute the arguments for the hypergeometric function
+            a = (1 + self.lap_alpha) / 2
+            b = 1 / 2
+            z = -(x_k_cpu - mu_k_cpu) ** 2 / (2 * sigma_cpu ** 2)
+            z_np = z.numpy()  # Convert to NumPy array
+            frac_result = sp.hyp1f1(a, b, z_np)  # Compute the hypergeometric function
+            frac_result_tensor = torch.tensor(frac_result, device=self.device)
+
+            func_k = (1 / (np.sqrt(2) * sigma_cpu)) ** self.lap_alpha * sp.gamma((1 + self.lap_alpha) / 2) * 2 ** self.lap_alpha / sp.gamma(1 / 2) * \
+                    1 / (sigma_cpu * torch.sqrt(2 * torch.tensor(np.pi))) * frac_result_tensor
+
+            # Store the result in the func tensor
+            func[:, :, k] = g0 * (sigma_cpu * torch.sqrt(2 * torch.tensor(np.pi))) * torch.exp(0.5 * (x[:, :, k] - mu_k_cpu) ** 2 / sigma_cpu ** 2) * func_k
+
         return func
     
    
