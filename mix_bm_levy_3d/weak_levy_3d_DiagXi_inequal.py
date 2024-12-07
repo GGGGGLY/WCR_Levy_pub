@@ -435,7 +435,8 @@ class Model(object):
             for i in range(0,d):
                 Mreg[i] = 1.0/(np.linalg.norm(X0[:,i],normalize))
                 X[:,i] = Mreg[i]*X0[:,i]
-        else: X = X0
+        else: 
+            X = X0
 
         # Get the standard ridge esitmate
         if lam != 0: 
@@ -456,31 +457,39 @@ class Model(object):
 
             # If nothing changes then stop
             if num_relevant == len(new_biginds):
-                print("here1")
                 break
             else: num_relevant = len(new_biginds)
 
             # Also make sure we didn't just lose all the coefficients
             if len(new_biginds) == 0:
                 if j == 0:
-                    print("here2")
                     #if print_results: print "Tolerance too high - all coefficients set below tolerance"
                     return w
                 else:
-                    print("here3")
                     break
             biginds = new_biginds
 
             # Otherwise get a new guess
             w[smallinds] = 0
-            if lam != 0: w[biginds] = np.linalg.lstsq(X[:, biginds].T.dot(X[:, biginds]) + lam*np.eye(len(biginds)),X[:, biginds].T.dot(y))[0]
-            else: w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
+            if lam != 0: 
+                w[biginds] = np.linalg.lstsq(X[:, biginds].T.dot(X[:, biginds]) + lam*np.eye(len(biginds)),X[:, biginds].T.dot(y))[0]
+            else: 
+                w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
 
         # Now that we have the sparsity pattern, use standard least squares to get w
-        if biginds != []: w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
+        # if biginds != []: 
+        #     w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
 
-        if normalize != 0: return np.multiply(Mreg,w)
-        else: return w
+        if biginds.size > 0:  # 确保 biginds 不是空的
+            w[biginds] = np.linalg.lstsq(X[:, biginds], y, rcond=None)[0]
+        else:  # 如果 biginds 为空，则直接返回
+            print("Warning: biginds is empty. Returning w as-is.")
+            return w
+
+        if normalize != 0: 
+            return np.multiply(Mreg,w)
+        else: 
+            return w
     
     # @utils.timing
     def compile(self, basis_order, basis_xi_order, gauss_variance, xi_q, type, drift_term,diffusion_term, xi_term,
@@ -519,6 +528,7 @@ class Model(object):
         Ab = torch.mm(torch.t(self.A), self.b)
         # print("A.max: ", self.A.max(), "b.max: ", self.b.max())
         # print("ATA.max: ", AA.max(), "ATb.max: ", Ab.max())
+
         self.zeta = torch.tensor(self.STRidge(self.A.detach().numpy(), self.b.detach().numpy(), lam, 100, STRidge_threshold)).to(torch.float)
         print("zeta: ", self.zeta.size(), self.zeta)
         
@@ -598,7 +608,7 @@ if __name__ == '__main__':
 
     testFunc = Gaussian
     model = Model(t, data, alpha, xi_q, Xi_type, testFunc, device)
-    model.compile(basis_order=3, basis_xi_order=1, gauss_variance=0.52, xi_q = xi_q, type='LMM_3', \
+    model.compile(basis_order=3, basis_xi_order=1, gauss_variance=0.5, xi_q = xi_q, type='LMM_3', \
                   drift_term=drift, diffusion_term=diffusion, xi_term = xi,
                   drift_independence=True, diffusion_independence=True, xi_independence=True, gauss_samp_way='lhs', lhs_ratio=0.6) 
     # For 1 dimension, "drift_independence" and "diffusion_independence"  make no difference

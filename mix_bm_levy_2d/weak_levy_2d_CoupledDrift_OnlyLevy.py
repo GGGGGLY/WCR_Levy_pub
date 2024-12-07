@@ -415,24 +415,21 @@ class Model(object):
         for j in range(maxit):
             # Figure out which items to cut out
             smallinds = np.where(abs(w) < tol)[0]
-            print("STRidge_j: ", j)
-            print("smallinds", smallinds)
+            # print("STRidge_j: ", j)
+            # print("smallinds", smallinds)
             new_biginds = [i for i in range(d) if i not in smallinds]
 
             # If nothing changes then stop
             if num_relevant == len(new_biginds):
-                print("here1")
                 break
             else: num_relevant = len(new_biginds)
 
             # Also make sure we didn't just lose all the coefficients
             if len(new_biginds) == 0:
                 if j == 0:
-                    print("here2")
                     #if print_results: print "Tolerance too high - all coefficients set below tolerance"
                     return w
                 else:
-                    print("here3")
                     break
             biginds = new_biginds
 
@@ -481,10 +478,10 @@ class Model(object):
         self.b = self.b.to("cpu")
         AA = torch.mm(torch.t(self.A), self.A)
         Ab = torch.mm(torch.t(self.A), self.b)
-        print("A.max: ", self.A.max(), "b.max: ", self.b.max())
-        print("ATA.max: ", AA.max(), "ATb.max: ", Ab.max())
+        # print("A.max: ", self.A.max(), "b.max: ", self.b.max())
+        # print("ATA.max: ", AA.max(), "ATb.max: ", Ab.max())
         self.zeta = torch.tensor(self.STRidge(self.A.detach().numpy(), self.b.detach().numpy(), lam, 100, STRidge_threshold)).to(torch.float)
-        print("zeta: ", self.zeta.size(), self.zeta)
+        # print("zeta: ", self.zeta.size(), self.zeta)
 
       
         #if self.xi_independence:
