@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from collections import OrderedDict
-from GenerateData_n_inequal_OnlyLevy import DataSet
+from gen_data.GenerateData_n_inequal_OnlyLevy import DataSet
 from pyDOE import lhs
 import time
 import utils
