@@ -608,7 +608,7 @@ if __name__ == '__main__':
 
     testFunc = Gaussian
     model = Model(t, data, alpha, xi_q, Xi_type, testFunc, device)
-    model.compile(basis_order=3, basis_xi_order=1, gauss_variance=0.5, xi_q = xi_q, type='LMM_3', \
+    model.compile(basis_order=3, basis_xi_order=1, gauss_variance=0.48, xi_q = xi_q, type='LMM_3', \
                   drift_term=drift, diffusion_term=diffusion, xi_term = xi,
                   drift_independence=True, diffusion_independence=True, xi_independence=True, gauss_samp_way='lhs', lhs_ratio=0.6) 
     # For 1 dimension, "drift_independence" and "diffusion_independence"  make no difference
