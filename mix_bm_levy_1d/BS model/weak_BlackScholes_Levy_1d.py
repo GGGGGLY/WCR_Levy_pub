@@ -478,7 +478,7 @@ if __name__ == '__main__':
 
     testFunc = Gaussian
     model = Model(t, data, testFunc)
-    model.compile(basis_order=3,basis_xi_order=1, gauss_variance=0.3, type='LMM_2_nonequal', drift_term=drift, xi_term=xi,\
+    model.compile(basis_order=3, basis_xi_order=1, gauss_variance=0.3, type='LMM_2_nonequal', drift_term=drift, xi_term=xi,\
                   gauss_samp_way='lhs', lhs_ratio=1.0)
     model.train(gauss_samp_number=50, lam=0.0, STRidge_threshold=0.1)
     

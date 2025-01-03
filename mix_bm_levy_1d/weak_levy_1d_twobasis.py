@@ -17,7 +17,7 @@ import time
 import utils
 import scipy.io
 import scipy.special as sp
-
+from pyDOE import lhs
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -131,14 +131,17 @@ class Model(object):
     def build_basis(self): # \Lambda matrix
         """build the basis list for the different time snapshot 
         """
+        print("Build basis...")
         self.t_number = len(self.t)
-        self.basis1_number = int(np.math.factorial(self.dimension+self.basis_order)
+        self.basis1_number = int(np.math.factorial(self.dimension + self.basis_order)
                 /(np.math.factorial(self.dimension)*np.math.factorial(self.basis_order))) 
+        print("basis1_number", self.basis1_number)
         
         if self.dimension ==1:
             self.basis2_number = 1
         else:
             self.basis2_number = int( self.dimension*(self.dimension+1)/2 ) + 1
+        print("basis2_number", self.basis2_number)
         
 
         # Construct Theta
@@ -146,55 +149,53 @@ class Model(object):
         for it in range(self.t_number):
             X = self._get_data_t(it)
             basis_count1 = 0
-            Theta = torch.zeros(X.size(0),self.basis1_number)
+            Theta = torch.zeros(X.size(0), self.basis1_number)
             Theta[:,0] = 1
-            basis_count1 += 1
-            for ii in range(0,self.dimension):
-                Theta[:,basis_count1] = X[:,ii]
+            if self.basis_order > 1:
                 basis_count1 += 1
+                for ii in range(0, self.dimension):
+                    Theta[:,basis_count1] = X[:,ii]
+                    basis_count1 += 1
 
-            if self.basis_order >= 2:
-                for ii in range(0,self.dimension):
-                    for jj in range(ii,self.dimension):
-                        Theta[:,basis_count1] = torch.mul(X[:,ii],X[:,jj])
-                        basis_count1 += 1
-
-            if self.basis_order >= 3:
-                for ii in range(0,self.dimension):
-                    for jj in range(ii,self.dimension):
-                        for kk in range(jj,self.dimension):
-                            Theta[:,basis_count1] = torch.mul(torch.mul(X[:,ii],
-                                X[:,jj]),X[:,kk])
+                if self.basis_order >= 2:
+                    for ii in range(0,self.dimension):
+                        for jj in range(ii,self.dimension):
+                            Theta[:,basis_count1] = torch.mul(X[:,ii],X[:,jj])
                             basis_count1 += 1
 
-            if self.basis_order >= 4:
-                for ii in range(0,self.dimension):
-                    for jj in range(ii,self.dimension):
-                        for kk in range(jj,self.dimension):
-                            for ll in range(kk,self.dimension):
-                                Theta[:,basis_count1] = torch.mul(torch.mul(torch.mul(X[:,ii],
-                                    X[:,jj]),X[:,kk]),X[:,ll])
+                if self.basis_order >= 3:
+                    for ii in range(0,self.dimension):
+                        for jj in range(ii,self.dimension):
+                            for kk in range(jj,self.dimension):
+                                Theta[:,basis_count1] = torch.mul(torch.mul(X[:,ii],
+                                    X[:,jj]),X[:,kk])
                                 basis_count1 += 1
 
-            if self.basis_order >= 5:
-                for ii in range(0,self.dimension):
-                    for jj in range(ii,self.dimension):
-                        for kk in range(jj,self.dimension):
-                            for ll in range(kk,self.dimension):
-                                for mm in range(ll,self.dimension):
-                                    Theta[:,basis_count1] = torch.mul(torch.mul(torch.mul(torch.mul(
-                                        X[:,ii],X[:,jj]),X[:,kk]),
-                                            X[:,ll]),X[:,mm])
+                if self.basis_order >= 4:
+                    for ii in range(0,self.dimension):
+                        for jj in range(ii,self.dimension):
+                            for kk in range(jj,self.dimension):
+                                for ll in range(kk,self.dimension):
+                                    Theta[:,basis_count1] = torch.mul(torch.mul(torch.mul(X[:,ii],
+                                        X[:,jj]),X[:,kk]),X[:,ll])
                                     basis_count1 += 1
-            
-            assert basis_count1 == self.basis1_number
+
+                if self.basis_order >= 5:
+                    for ii in range(0,self.dimension):
+                        for jj in range(ii,self.dimension):
+                            for kk in range(jj,self.dimension):
+                                for ll in range(kk,self.dimension):
+                                    for mm in range(ll,self.dimension):
+                                        Theta[:,basis_count1] = torch.mul(torch.mul(torch.mul(torch.mul(
+                                            X[:,ii],X[:,jj]),X[:,kk]),
+                                                X[:,ll]),X[:,mm])
+                                        basis_count1 += 1
+                
+                assert basis_count1 == self.basis1_number
             basis1.append(Theta)
             basis_theta = torch.stack(basis1)
-            # print("X", X)
-        #print("basis_theta", basis_theta.shape)
             
-            
-            # Construct Xi
+        # Construct Xi
         basis2 = []     
         for it in range(self.t_number):
             basis_count2 = 0
@@ -204,6 +205,7 @@ class Model(object):
             # the basis of XI is given by x^{2q} times (x_1^{2q}, ..., x_d^{2q}, x_1^{q}x_2^{q}, ..., x_1^{q}x_d^{q}, ..., x_{d-1}^{q}x_d^{q})
             Xi[:,0] = 1
             basis_count2 += 1
+            
 
             if self.basis_xi_order == 1 & self.dimension > 1:  
                 for ii in range(0,self.dimension):
@@ -211,17 +213,13 @@ class Model(object):
                         Xi[:,basis_count2] = torch.mul(X[:,ii]** self.xi_q, X[:,jj]** self.xi_q)
                         basis_count2 += 1
             else:
-                print("The basis of levy noise is not suitable or dimension is 1")
-                
-                    
-            print("basis_count2",basis_count2)
-            print("basis2_number",self.basis2_number)
-            print("Xi",Xi)
+                print("The basis of Levy noise is not suitable or dimension is 1")
+
                 
             assert basis_count2 == self.basis2_number
+            # print("Xi", Xi)
             basis2.append(Xi)
             basis_xi = torch.stack(basis2)
-        #print("basis_xi", basis_xi.shape)
             
         self.basis_theta = basis_theta   
         self.basis = torch.cat([basis_theta, basis_xi],dim=2)         
@@ -374,7 +372,10 @@ class Model(object):
     def sampleTestFunc(self, samp_number):
         # for i in range(self.sampling_number):
         if self.gauss_samp_way == 'lhs':
-            mu_list = self.lhs_ratio * torch.rand(samp_number)*(self.data.max()-self.data.min()) + self.data.min()
+            lb = torch.tensor([self.data[:, :, i].min() for i in range(self.dimension)]) 
+            ub = torch.tensor([self.data[:, :, i].max() for i in range(self.dimension)])
+            mu_list = lb + self.lhs_ratio * (ub - lb) * torch.tensor(lhs(self.dimension, samp_number), dtype=torch.float32) #.to(self.device)
+            # mu_list = self.lhs_ratio * torch.rand(samp_number)*(self.data.max()-self.data.min()) + self.data.min()
         if self.gauss_samp_way == 'SDE':
             if samp_number <= self.bash_size:
                 index = np.arange(self.bash_size)
@@ -414,6 +415,7 @@ class Model(object):
 
         This assumes y is only one column
         """
+        
         n,d = X0.shape
         X = np.zeros((n,d), dtype=np.complex64)
         # First normalize data
@@ -423,8 +425,7 @@ class Model(object):
                 Mreg[i] = 1.0/(np.linalg.norm(X0[:,i],normalize))
                 X[:,i] = Mreg[i]*X0[:,i]
         else: X = X0
-
-        # Get the standard ridge esitmate
+ 
         if lam != 0: w = np.linalg.lstsq(X.T.dot(X) + lam*np.eye(d),X.T.dot(y))[0]
         else:
             #w = np.linalg.lstsq(X,y)[0] #########################
@@ -432,20 +433,22 @@ class Model(object):
             w = np.dot(X_inv,y)
         num_relevant = d
         biginds = np.where(abs(w) > tol)[0]
+        
 
         # Threshold and continue
         for j in range(maxit):
             # Figure out which items to cut out
             smallinds = np.where(abs(w) < tol)[0]
-            print("STRidge_j: ", j)
-            print("smallinds", smallinds)
+            # print("smallinds", smallinds) # []
             new_biginds = [i for i in range(d) if i not in smallinds]
+            # print("new_biginds", new_biginds)  #[0, 1, 2, 3]
 
             # If nothing changes then stop
             if num_relevant == len(new_biginds):
                 print("here1")
                 break
-            else: num_relevant = len(new_biginds)
+            else: 
+                num_relevant = len(new_biginds)
 
             # Also make sure we didn't just lose all the coefficients
             if len(new_biginds) == 0:
@@ -457,14 +460,19 @@ class Model(object):
                     print("here3")
                     break
             biginds = new_biginds
+            print("biginds", biginds)
 
             # Otherwise get a new guess
             w[smallinds] = 0
-            if lam != 0: w[biginds] = np.linalg.lstsq(X[:, biginds].T.dot(X[:, biginds]) + lam*np.eye(len(biginds)),X[:, biginds].T.dot(y))[0]
-            else: w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
+            if lam != 0: 
+                w[biginds] = np.linalg.lstsq(X[:, biginds].T.dot(X[:, biginds]) + lam*np.eye(len(biginds)),X[:, biginds].T.dot(y))[0]
+            else: 
+                w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
 
         # Now that we have the sparsity pattern, use standard least squares to get w
-        if biginds != []: w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
+        # if biginds != []: 
+        if len(biginds) != 0: 
+            w[biginds] = np.linalg.lstsq(X[:, biginds],y)[0]
 
         if normalize != 0: return np.multiply(Mreg,w)
         else: return w
@@ -487,8 +495,8 @@ class Model(object):
     @torch.no_grad()
     def train(self, gauss_samp_number, lam, STRidge_threshold):
         self.buildLinearSystem(samp_number=gauss_samp_number)
-        print("A: ", self.A.size(), "b: ", self.b.size())
-        print("A",np.linalg.cond(self.A, p=None))
+        # print("A: ", self.A.size(), "b: ", self.b.size())
+        print("A", np.linalg.cond(self.A, p=None))
         self.zeta = torch.tensor(self.STRidge(self.A.detach().numpy(), self.b.detach().numpy(), lam, 100, STRidge_threshold)).to(torch.float)
         print("zeta: ", self.zeta)
 
@@ -501,6 +509,7 @@ class Model(object):
         self.zeta[-1] = (self.zeta[-1])**(2/3) #\Sigma = xi xi^T
         print("Diffusion term of Levy Noise: ", self.zeta[-1])
         true = torch.cat((self.drift, self.diffusion, self.xi))
+        print("true: ", true)
         index = torch.nonzero(true).squeeze()
         relative_error = torch.abs((self.zeta.squeeze()[index] - true[index]) / true[index])
         print("Maximum relative error: ", relative_error.max().numpy())
@@ -514,30 +523,49 @@ if __name__ == '__main__':
     # t = np.linspace(0, T, int(T/dt) + 1).astype(np.float32)
     #t = torch.tensor([0.1, 0.3, 0.5])
     #t = torch.tensor([0.2, 0.5, 1.0])
-    #t = torch.linspace(0,1,10)
     #t = torch.tensor([0.1, 0.4, 0.7, 1])
-
-    t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-    #t = torch.tensor([0.2, 0.5, 1])
-    # data = scipy.io.loadmat('./data/data1d.mat')['bb'].astype(np.float32)
-    # data = torch.tensor(data).unsqueeze(-1)
+    
     # drift = torch.tensor([0, -3, -0.5, 4, 0.5, -1])   # -(x+1.5)(x+1)x(x-1)(x-2)
     # drift = torch.tensor([0, -24, 50, -35, 10, -1])     # -x(x-1)(x-2)(x-3)(x-4)
     # drift = torch.tensor([0, -4, 0, 5, 0, -1])  # -x(x-1)(x+1)(x-2)(x+2)
-    drift = torch.tensor([0, 1, 0, -1])
-    diffusion = torch.tensor([1.0])
-    xi = torch.tensor([1.0])
-    samples = 10000
+
+    t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    drift = torch.tensor([5])   #torch.tensor([0, 0.94, 0, -1])
+    diffusion = torch.tensor([4])  #torch.tensor([1])
+    xi = torch.tensor([3])   #torch.tensor([1])  
+    samples = 5000 #10000
+    print("Generating data...")
     dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1,
                       drift_term=drift, diffusion_term=diffusion, xi_term=xi, alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]),
                       explosion_prevention=False) #initialization=torch.randint(-1000,1000,[10000, 1])
     data = dataset.get_data(plot_hist=False)
+    
     print("data: ", data.shape, data.max(), data.min())
-
+    
     testFunc = Gaussian
     model = Model(t, data, testFunc)
-    model.compile(basis_order=3,basis_xi_order=1, gauss_variance=0.7, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, xi_term=xi,
-                  gauss_samp_way='lhs', lhs_ratio=0.7)
-    model.train(gauss_samp_number=100, lam=0.01, STRidge_threshold=0.1)
+    model.compile(basis_order=0, basis_xi_order=0, gauss_variance=1.6, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, xi_term=xi,
+                  gauss_samp_way='lhs', lhs_ratio=1.0)
+    model.train(gauss_samp_number=2000, lam=0.01, STRidge_threshold=0.1)
+    
+    # dt = 0.0001
+    # t = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    # drift = torch.tensor([0, 1, 0, -1])
+    # diffusion = torch.tensor([1.0])
+    # xi = torch.tensor([1.0])
+    # samples = 10000
+    # dataset = DataSet(t, dt=0.0001, samples_num=samples, dim=1,
+    #                   drift_term=drift, diffusion_term=diffusion, xi_term=xi, alpha_levy = 3/2, initialization=torch.normal(0, 0.2,[samples, 1]),
+    #                   explosion_prevention=False)  
+    # data = dataset.get_data(plot_hist=False) #lb, ub = data.min(), data.max()
+    # print("data: ", data.shape, data.max(), data.min())
+
+    # testFunc = Gaussian
+    # model = Model(t, data, testFunc)
+    # model.compile(basis_order=3,basis_xi_order=1, gauss_variance=0.7, type='LMM_2_nonequal', drift_term=drift, diffusion_term=diffusion, xi_term=xi,
+    #               gauss_samp_way='lhs', lhs_ratio=0.7)
+    # model.train(gauss_samp_number=100, lam=0.01, STRidge_threshold=0.1)
+
+    
     
         
